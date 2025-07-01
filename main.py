@@ -12,7 +12,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000"],  # 프론트 주소
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -23,6 +23,7 @@ WATSON_API_KEY = os.getenv("WATSON_API_KEY")
 PROJECT_ID = os.getenv("PROJECT_ID")
 SPACE_ID = os.getenv("SPACE_ID")
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+
 
 # 🔎 유튜브 검색 함수
 def search_youtube_videos(query: str, max_results=3):
@@ -47,15 +48,10 @@ def search_youtube_videos(query: str, max_results=3):
         results.append(f"{title}: {link}")
 
     return "\n".join(results)
-# NOTE: you must set $API_KEY below using information retrieved from your IBM Cloud account (https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/ml-authentication.html?context=wx)
 
 
-
-# the above CURL request will return an auth token that you will use as $IAM_TOKEN in the scoring request below
-# TODO:  manually define and pass values to be scored below
+# 🧠 IBM WatsonX 토큰 요청 함수
 def get_ibm_access_token(api_key: str) -> str:
-    import requests
-
     response = requests.post(
         "https://iam.cloud.ibm.com/identity/token",
         headers={
@@ -66,18 +62,14 @@ def get_ibm_access_token(api_key: str) -> str:
             "grant_type": "urn:ibm:params:oauth:grant-type:apikey",
             "apikey": api_key
         },
-        verify = False
+        verify=False
     )
     response.raise_for_status()
     return response.json()["access_token"]
 
-# get access tokens
-ACCESS_TOKEN = get_ibm_access_token(WATSON_API_KEY)
-# print(ACCESS_TOKEN)
 
-
-# 🧠 watsonx에 요청
 def ask_watsonx(prompt: str) -> str:
+    ACCESS_TOKEN = get_ibm_access_token(WATSON_API_KEY)
     url = f'https://us-south.ml.cloud.ibm.com/ml/v1/deployments/a75741b8-0ed0-403b-9690-7e8305f4b896/text/generation?version=2021-05-01'
     headers = {
         "Authorization": f"Bearer {ACCESS_TOKEN}",
@@ -100,10 +92,13 @@ def ask_watsonx(prompt: str) -> str:
     return response.text
 
 
+
+# 📦 레시피 요청 스키마
 class RecipeRequest(BaseModel):
     ingredients: str
 
 
+# ✅ 레시피 추천 API
 @app.post("/recommend")
 async def recommend_recipe(req: RecipeRequest):
     ingredients = req.ingredients
@@ -111,8 +106,19 @@ async def recommend_recipe(req: RecipeRequest):
     ai_response = ask_watsonx(prompt)
     youtube_links = search_youtube_videos(ingredients)
 
-
     return {
         "result": ai_response,
         "youtube": youtube_links
     }
+
+
+# ✅ YOLO 클래스 리스트 제공 API
+@app.get("/api/yolo-classes")
+def get_yolo_classes():
+    json_path = os.path.join(os.path.dirname(__file__), "yolo_classes.json")
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            classes = json.load(f)
+        return classes
+    except Exception as e:
+        return {"error": str(e)}
