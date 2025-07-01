@@ -28,6 +28,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 프론트 도메인
+    # allow_origins=["http://localhost:3000"],  # 프론트 주소
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,7 +44,6 @@ GOOGLE_EMAIL = os.getenv("GOOGLE_EMAIL")  # 구글 이메일
 GOOGLE_PASSWORD = os.getenv("GOOGLE_PASSWORD")  # 구글 비밀번호
 CHROME_PROFILE_PATH = os.getenv("CHROME_PROFILE_PATH")
 
-# ✅ 유튜브 검색
 def search_youtube_videos(query: str, max_results=3):
     url = "https://www.googleapis.com/youtube/v3/search"
     params = {
@@ -84,12 +84,9 @@ def get_ibm_access_token(api_key: str) -> str:
     response.raise_for_status()
     return response.json()["access_token"]
 
-
 # ✅ access token 전역 저장
 ACCESS_TOKEN = get_ibm_access_token(WATSON_API_KEY)
 
-
-# ✅ Watsonx 호출
 def ask_watsonx(prompt: str) -> str:
     url = f'https://us-south.ml.cloud.ibm.com/ml/v1/deployments/a75741b8-0ed0-403b-9690-7e8305f4b896/text/generation?version=2021-05-01'
     headers = {
@@ -238,3 +235,15 @@ def get_random_recipes(page: Optional[int] = Query(None)):
             continue
 
     return {"results": results, "count": len(results)}
+
+
+# ✅ YOLO 클래스 리스트 제공 API
+@app.get("/api/yolo-classes")
+def get_yolo_classes():
+    json_path = os.path.join(os.path.dirname(__file__), "yolo_classes.json")
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            classes = json.load(f)
+        return classes
+    except Exception as e:
+        return {"error": str(e)}
