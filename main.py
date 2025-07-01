@@ -1,3 +1,5 @@
+from langchain_community.vectorstores import FAISS
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +11,10 @@ import json
 load_dotenv()
 
 app = FastAPI()
+
+# 1. 벡터 DB 로드
+embedding_model = HuggingFaceEmbeddings(model_name="jhgan/ko-sbert-nli")
+vectordb = FAISS.load_local("vector_store/diet", embedding_model, allow_dangerous_deserialization=True)
 
 app.add_middleware(
     CORSMiddleware,
@@ -99,15 +105,47 @@ def ask_watsonx(prompt: str) -> str:
 
     return response.text
 
+def build_prompt(ingredients: str, context: str = None, disease: str = None) -> str:
+    if disease and context:
+        return f"""당신은 질환별 식단 전문가입니다.
+
+다음 문서를 참고하여 '{disease}' 환자에게 적절한 요리를,
+사용자가 제공한 재료를 활용해 한국어로 추천해주세요.
+
+문서:
+{context}
+
+질문:
+{ingredients}를 활용한 요리 레시피를 추천해줘.
+"""
+    else:
+        return f"""당신은 요리 전문가입니다.
+
+{ingredients}를 활용한 요리 레시피를 추천해줘.
+"""
+
 
 class RecipeRequest(BaseModel):
     ingredients: str
+    #disease: Optional[str] = None  # 질환은 선택 사항
 
 
 @app.post("/recommend")
 async def recommend_recipe(req: RecipeRequest):
     ingredients = req.ingredients
-    prompt = f"{ingredients}를 활용한 요리 레시피를 한국어로 추천해줘."
+    disease = '통풍'   # 사용자 선호도 예시 / req.disease
+    query = f"{disease}에 맞는 식단 조건을 알려줘"
+
+    # 관련 context 추출 (Top 5)
+    if disease:
+        # 질환이 있는 경우, 벡터 DB에서 문맥 검색
+        query = f"{disease} 식단"
+        docs = vectordb.similarity_search(query, k=5)
+        context = "\n\n".join([doc.page_content for doc in docs])
+    else:
+        context = None
+
+    prompt = build_prompt(ingredients=ingredients, context=context, disease=disease)
     ai_response = ask_watsonx(prompt)
     youtube_links = search_youtube_videos(ingredients)
 
