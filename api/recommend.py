@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from api.recipes import get_recipes
-from utils.prompt import build_prompt
+from utils.prompt import build_prompt, format_recipes_for_prompt
 from utils.watsonx import ask_watsonx
 from utils.crawl import crawl_recipe_detail_bulk
 from utils.youtube import search_youtube_videos
@@ -19,22 +19,24 @@ class RecipeRequest(BaseModel):
 # ✅ 기존 요약 + 유튜브
 @router.post("/recommend")
 async def recommend_recipe(req: RecipeRequest):
-    # load vector_db
     vectordb = config.vector_db
-    
+
     ingredients = req.ingredients
     print(f"🔍 Ingredients received: {ingredients}")
 
     # Get recipes
-    recipes_dict = get_recipes(ingredients=[])
+    recipes_dict = get_recipes(ingredients=ingredients.split(","))
     recipes = recipes_dict["results"]  # 리스트만 추출
     print(f"🔍 Recipes found: {len(recipes)}")
+    print(f"🔍 Recipes : {recipes}")
 
     # Crawl detailed recipes
     detailed_recipes = crawl_recipe_detail_bulk(recipes)
     print(f"🔍 Detailed recipes crawled: {len(detailed_recipes)}")
+    detailed_recipes = format_recipes_for_prompt(detailed_recipes)
 
-    disease = None   # 사용자 선호도 예시 / req.disease 추가해야함
+
+    disease = '당뇨'   # 사용자 선호도 예시 / req.disease 추가해야함
     query = f"{disease}에 맞는 식단 조건을 알려줘"
 
     # 관련 context 추출 (Top 5)
@@ -52,13 +54,15 @@ async def recommend_recipe(req: RecipeRequest):
 
     # Ask Watsonx
     ai_response = ask_watsonx(prompt)
-    print(f"🔍 Watsonx response: {ai_response[:200]}...")  # First 200 characters of Watson's response
+    #print(f"🔍 Watsonx response: {ai_response[:200]}...")  # First 200 characters of Watson's response
+    print(f"🔍 Watsonx response: {ai_response}")
 
     # YouTube links
-    youtube_links = search_youtube_videos(ingredients)
-    print(f"🔍 YouTube links: {youtube_links}")
+    # youtube_links = search_youtube_videos(ingredients)
+    # print(f"🔍 YouTube links: {youtube_links}")
     
     return {
         "result": ai_response,
-        "youtube": youtube_links
+        #"youtube": youtube_links
     }
+
