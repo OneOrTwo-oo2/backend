@@ -1,0 +1,29 @@
+# HTML 파싱
+beautifulsoup4
+
+# LangChain 및 임베딩
+langchain
+langchain-community
+langchain-huggingface
+
+# 벡터스토어
+faiss-cpu
+# faiss-gpu  # ⚠️ GPU 환경에서만 사용하세요. faiss-cpu와 중복 설치 금지
+
+# HuggingFace
+transformers
+sentence-transformers
+
+# 웹 자동화
+selenium
+webdriver-manager
+
+# FastAPI
+fastapi
+uvicorn[standard]
+
+# Numpy 버전 제한
+numpy<2.0
+
+# pytorch
+# 2.7.1 ++ (cuda 11.8)
