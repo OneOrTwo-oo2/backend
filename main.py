@@ -116,25 +116,30 @@ def ask_watsonx(prompt: str) -> str:
 
 # ✅ prompt 작성
 def build_prompt(ingredients: str, detailed_recipes: str, context: str = None, disease: str = None) -> str:
-    
-    prompt = f"""당신은 요리 전문가입니다.
-    
-    다음 문서를 참고하여 '{disease}' 환자에게 맞는 식단과 재료를 파악하고,
-    사용자가 제공한 재료를 활용해 '{detailed_recipes}'에 있는 레시피 중 가장 적절한 하나를 한국어로 추천해주세요.
-    마지막에는 어떤'{disease}'에 적절한 요리인지 설명하고, 검색된 '{detailed_recipes}'의 레시피 총 갯수를 적어주세요.
-    
-    
-    문서:{context}
-    
-    질문:{ingredients}를 활용한 요리 레시피를 추천해줘."""
-    
     if disease and context:
-        return prompt
-    else:
-        return f"""당신은 요리 전문가입니다.
+        prompt = f"""당신은 요리와 영양에 정통한 전문가입니다.
 
-    사용자가 제공한 재료를 활용해 '{detailed_recipes}'에 있는 레시피 중 가장장 적절한 하나를 한국어로 추천해주세요.
-    마지막에는 '{detailed_recipes}' 의 총 갯수를 적어주세요."""
+다음 문서를 참고하여 '{disease}' 질환을 가진 사용자를 위한 적절한 식단을 고려해주세요.  
+사용자가 입력한 재료인 '{ingredients}'를 활용하여, '{detailed_recipes}' 중에서 가장 적절한 하나의 레시피를 한국어로 추천해주세요.
+
+요청사항:
+- 해당 레시피의 과정과 재료를 알려주세요.
+- 어떤 점에서 '{disease}' 환자에게 이 레시피를 추천해줬는지 구체적으로 설명해주세요.
+- '{detailed_recipes}'에서 총 몇 개의 레시피가 있는지 알려주세요.
+
+참고 문서:
+{context}
+"""
+    else:
+        prompt = f"""당신은 요리 전문가입니다.
+
+사용자가 입력한 재료인 '{ingredients}'를 활용하여, '{detailed_recipes}' 중에서 가장 적절한 하나의 레시피를 한국어로 추천해주세요.
+
+요청사항:
+- 해당 레시피의 과정과 재료를 알려주세요.
+- '{detailed_recipes}'에서 총 몇 개의 레시피가 있는지 알려주세요.
+"""
+    return prompt
 
 
 # ✅ POST 요청 바디
@@ -150,15 +155,18 @@ async def recommend_recipe(req: RecipeRequest):
     print(f"🔍 Ingredients received: {ingredients}")
 
     # Get recipes
-    recipes_dict = get_recipes(ingredients=[])
+    recipes_dict = get_recipes(ingredients=ingredients.split(","))
     recipes = recipes_dict["results"]  # 리스트만 추출
     print(f"🔍 Recipes found: {len(recipes)}")
+    print(f"🔍 Recipes : {recipes}")
 
     # Crawl detailed recipes
     detailed_recipes = crawl_recipe_detail_bulk(recipes)
     print(f"🔍 Detailed recipes crawled: {len(detailed_recipes)}")
+    detailed_recipes = format_recipes_for_prompt(detailed_recipes)
 
-    disease = None   # 사용자 선호도 예시 / req.disease 추가해야함
+
+    disease = '당뇨'   # 사용자 선호도 예시 / req.disease 추가해야함
     query = f"{disease}에 맞는 식단 조건을 알려줘"
 
     # 관련 context 추출 (Top 5)
@@ -176,15 +184,16 @@ async def recommend_recipe(req: RecipeRequest):
 
     # Ask Watsonx
     ai_response = ask_watsonx(prompt)
-    print(f"🔍 Watsonx response: {ai_response[:200]}...")  # First 200 characters of Watson's response
+    #print(f"🔍 Watsonx response: {ai_response[:200]}...")  # First 200 characters of Watson's response
+    print(f"🔍 Watsonx response: {ai_response}")
 
     # YouTube links
-    youtube_links = search_youtube_videos(ingredients)
-    print(f"🔍 YouTube links: {youtube_links}")
+    # youtube_links = search_youtube_videos(ingredients)
+    # print(f"🔍 YouTube links: {youtube_links}")
     
     return {
         "result": ai_response,
-        "youtube": youtube_links
+        #"youtube": youtube_links
     }
 
 
@@ -276,6 +285,25 @@ def crawl_recipe_detail_bulk(recipes: List[dict]) -> List[dict]:
             continue
 
     return results
+
+# ✅ 포맷 변환 함수 (레시피 정보 json -> 자연어 포맷)
+def format_recipes_for_prompt(detailed_recipes: List[dict], max_count=5) -> str:
+    formatted = []
+
+    for i, recipe in enumerate(detailed_recipes[:max_count], 1):
+        title = recipe["title"]
+        intro = recipe["intro"]
+        ingredients = ", ".join(recipe["ingredients"])
+        steps = " → ".join(recipe["steps"])
+
+        formatted.append(
+            f"{i}. {title}\n소개: {intro}\n재료: {ingredients}\n조리법: {steps}\n"
+        )
+
+    return "\n\n".join(formatted)
+
+
+
 
 @app.get("/random-recipes")
 def get_random_recipes(page: Optional[int] = Query(None)):
