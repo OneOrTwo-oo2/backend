@@ -34,6 +34,7 @@ numpy<2.0
 
 # 기타 필수 패키지
 pandas
+pymysql
 
 # 추가 설치 패키지
 ultralytics
