@@ -15,6 +15,13 @@ GOOGLE_PASSWORD = os.getenv("GOOGLE_PASSWORD")  # 구글 비밀번호
 CHROME_PROFILE_PATH = os.getenv("CHROME_PROFILE_PATH")
 WATSONX_URL = os.getenv("WATSONX_URL")
 
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_NAME = os.getenv("DB_NAME")
+DB_HOST = os.getenv("DB_HOST")
+
 # ✅ access token 전역 저장
 ACCESS_TOKEN = None
 

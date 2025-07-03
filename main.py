@@ -5,6 +5,9 @@ from api.router import router
 import config
 from utils.watsonx import get_ibm_access_token
 from utils.langchain import load_vector_db
+# DB초기화
+from db.init_db import init_db
+
 
 # set Access token in main.py
 config.ACCESS_TOKEN = get_ibm_access_token(config.WATSON_API_KEY)
@@ -15,6 +18,10 @@ config.vector_db = load_vector_db()
 app = FastAPI()
 app.include_router(router)
 
+@app.on_event("startup")
+def on_startup():
+    init_db()
+
 # ✅ CORS 설정
 app.add_middleware(
     CORSMiddleware,
@@ -24,6 +31,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 if __name__ == "__main__":

@@ -26,5 +26,21 @@ python-multipart
 # Numpy 버전 제한
 numpy<2.0
 
-# pytorch
-# 2.7.1 ++ (cuda 11.8)
+# PyTorch (CUDA 환경 별도 설치 권장. 아래는 참고용)
+# torch==2.1.0+cu118  # CUDA 11.8 사용 시
+# torchvision==0.16.0+cu118
+# torchaudio==2.1.0+cu118
+# 설치는 pip 또는 공식 PyTorch 가이드 참고: https://pytorch.org/get-started/locally/
+
+# 기타 필수 패키지
+pandas
+
+# 추가 설치 패키지
+ultralytics
+open_clip_torch
+
+# Google API 관련
+google-api-python-client
+google-auth
+google-auth-httplib2
+google-auth-oauthlib
