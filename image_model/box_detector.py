@@ -5,7 +5,7 @@ from ultralytics import YOLO
 from torchvision.ops import nms
 
 from image_model.config import *
-from classifier import classify_yolocls, classify_clip, classify_resnet
+from image_model.classifier import classify_yolocls, classify_clip, classify_resnet
 
 # :흰색_확인_표시: 전체 파이프라인
 def detect_nms(image_path):

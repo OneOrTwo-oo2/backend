@@ -33,15 +33,18 @@ async def recommend_recipe(req: RecipeRequest):
     # recipes = recipes_dict["results"]  # 리스트만 추출
     # print(f"🔍 Recipes found: {len(recipes)}")
     # print(f"🔍 Recipes : {recipes}")
+    
 
     # # Crawl detailed recipes
     # detailed_recipes = crawl_recipe_detail_bulk(recipes)
     # print(f"🔍 Detailed recipes crawled: {len(detailed_recipes)}")
     # detailed_recipes = format_recipes_for_prompt(detailed_recipes)
 
+
     disease = '빈혈'   # 사용자 선호도 예시 / req.disease 추가해야함
     allergies = '계란, 양파'
     diet_preference='저탄수화물'
+
 
     # 만개의 레시피 load
     recipes = pd.read_csv("./vector_store/recipe_cat4.csv")
@@ -57,8 +60,9 @@ async def recommend_recipe(req: RecipeRequest):
     else:
         context = None
 
+    print(context)
+
     # Build prompt
-    #prompt = build_prompt(ingredients=ingredients, detailed_recipes = detailed_recipes, context=context, disease=disease)
     prompt = build_prompt_with_context(ingredients=ingredients, 
                                        filtered_recipes = filtered_recipes, 
                                        context=context, 
@@ -72,8 +76,8 @@ async def recommend_recipe(req: RecipeRequest):
     # Ask Watsonx
     ai_response = ask_watsonx(prompt)
     #print(f"🔍 Watsonx response: {ai_response[:200]}...")  # First 200 characters of Watson's response
-    print(f"🔍 Watsonx response: {ai_response}")
-
+    print(f"🔍 Watsonx response: {ai_response}") 
+    
     # YouTube links
     # youtube_links = search_youtube_videos(ingredients)
     # print(f"🔍 YouTube links: {youtube_links}")
