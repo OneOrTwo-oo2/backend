@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 import numpy as np
 import cv2
+from utils.detect_ingredients import detect_ingredient
 
 import os
 UPLOAD_DIR = "uploads"
@@ -31,9 +32,12 @@ async def get_ingredients(file: UploadFile = File(...)):
     success = cv2.imwrite(save_path, image)
     if not success:
         raise HTTPException(status_code=500, detail="이미지 저장 실패")
+    
+    labels = detect_ingredient(save_path)
 
     return JSONResponse(content={
         "filename": file.filename,
         "saved_path": save_path,
+        "labels":labels,
         "content_type": file.content_type
     })

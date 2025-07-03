@@ -23,21 +23,30 @@ async def recommend_recipe(req: RecipeRequest):
 
     ingredients = req.ingredients
     print(f"🔍 Ingredients received: {ingredients}")
-
+    
+    import time
+    
+    start = time.time()
     # Get recipes
     recipes_dict = get_recipes(ingredients=ingredients.split(","))
     recipes = recipes_dict["results"]  # 리스트만 추출
     print(f"🔍 Recipes found: {len(recipes)}")
     print(f"🔍 Recipes : {recipes}")
+    end = time.time()
+    print(f"만개레시피 추출 실행 시간: {end - start:.4f}초")    
 
+
+    start = time.time()
     # Crawl detailed recipes
     detailed_recipes = crawl_recipe_detail_bulk(recipes)
     print(f"🔍 Detailed recipes crawled: {len(detailed_recipes)}")
     detailed_recipes = format_recipes_for_prompt(detailed_recipes)
+    end = time.time()
+    print(f"레시피 크롤링 실행 시간: {end - start:.4f}초")    
 
 
-    disease = '당뇨'   # 사용자 선호도 예시 / req.disease 추가해야함
-    query = f"{disease}에 맞는 식단 조건을 알려줘"
+    start = time.time()
+    disease = '고혈압'   # 사용자 선호도 예시 / req.disease 추가해야함
 
     # 관련 context 추출 (Top 5)
     if disease:
@@ -48,15 +57,22 @@ async def recommend_recipe(req: RecipeRequest):
     else:
         context = None
 
+    print(context)
     # Build prompt
     prompt = build_prompt(ingredients=ingredients, detailed_recipes = detailed_recipes, context=context, disease=disease)
-    print(f"🔍 Prompt built: {prompt[:200]}...")  # Print first 200 characters of prompt for debugging
-
+    print(f"🔍 Prompt built: {prompt}...")  # Print first 200 characters of prompt for debugging
+    end = time.time()
+    print(f"프롬프트 생성 실행 시간: {end - start:.4f}초") 
+    
+    start = time.time()
     # Ask Watsonx
     ai_response = ask_watsonx(prompt)
     #print(f"🔍 Watsonx response: {ai_response[:200]}...")  # First 200 characters of Watson's response
     print(f"🔍 Watsonx response: {ai_response}")
+    end = time.time()
+    print(f"왓슨 result 생성 실행 시간: {end - start:.4f}초") 
 
+    
     # YouTube links
     # youtube_links = search_youtube_videos(ingredients)
     # print(f"🔍 YouTube links: {youtube_links}")
