@@ -13,7 +13,7 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 GOOGLE_EMAIL = os.getenv("GOOGLE_EMAIL")  # 구글 이메일
 GOOGLE_PASSWORD = os.getenv("GOOGLE_PASSWORD")  # 구글 비밀번호
 CHROME_PROFILE_PATH = os.getenv("CHROME_PROFILE_PATH")
-
+WATSONX_URL = os.getenv("WATSONX_URL")
 
 # ✅ access token 전역 저장
 ACCESS_TOKEN = None

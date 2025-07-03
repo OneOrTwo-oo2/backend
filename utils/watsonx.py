@@ -22,7 +22,7 @@ def get_ibm_access_token(api_key: str) -> str:
 
 
 def ask_watsonx(prompt: str) -> str:
-    url = f'https://us-south.ml.cloud.ibm.com/ml/v1/deployments/a75741b8-0ed0-403b-9690-7e8305f4b896/text/generation?version=2021-05-01'
+    url = config.WATSONX_URL
     headers = {
         "Authorization": f"Bearer {config.ACCESS_TOKEN}",
         "Content-Type": "application/json",

@@ -2,7 +2,7 @@ import torch
 import cv2
 import os
 from ultralytics import YOLO
-from config import *  # CLASS_LABELS, CLS_MODEL_PATH, COLOR, BLOCKLIST, CLS_CONF_THRESHOLD 등
+from image_model.config import *  # CLASS_LABELS, CLS_MODEL_PATH, COLOR, BLOCKLIST, CLS_CONF_THRESHOLD 등
 import open_clip
 from PIL import ImageFont, ImageDraw, Image
 import numpy as np

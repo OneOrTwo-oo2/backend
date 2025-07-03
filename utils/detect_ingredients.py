@@ -6,4 +6,8 @@ def detect_ingredient(image_path):
     keep, all_boxes, all_crops = detect_nms(image_path)
     detections, result_img = classify_clip(image_path,keep,all_boxes,all_crops)
 
-    return detections    
+    labels = []
+    for det in detections:
+        labels.append(det['label'])
+    
+    return labels
