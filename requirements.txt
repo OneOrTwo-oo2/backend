@@ -21,6 +21,7 @@ webdriver-manager
 # FastAPI
 fastapi
 uvicorn[standard]
+python-multipart
 
 # Numpy 버전 제한
 numpy<2.0
