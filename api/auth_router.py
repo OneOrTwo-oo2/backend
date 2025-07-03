@@ -1,4 +1,4 @@
-# backend/routers/auth_router.py
+# backend/routers/router.py
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from google.oauth2 import id_token
@@ -7,17 +7,14 @@ from db.connection import SessionLocal
 from db.models import User
 import os
 from dotenv import load_dotenv
+from config import GOOGLE_CLIENT_ID
 
-load_dotenv()
-
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-
-auth_router = APIRouter()
+router = APIRouter()
 
 class GoogleLoginRequest(BaseModel):
     credential: str
 
-@auth_router.post("/auth/google-login")
+@router.post("/auth/google-login")
 def google_login(payload: GoogleLoginRequest):
     token = payload.credential
     if not token:
@@ -28,7 +25,7 @@ def google_login(payload: GoogleLoginRequest):
         idinfo = id_token.verify_oauth2_token(
             token,
             grequests.Request(),
-            audience=GOOGLE_CLIENT_ID
+            audience = GOOGLE_CLIENT_ID
         )
 
         email = idinfo["email"]

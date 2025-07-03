@@ -1,0 +1,11 @@
+from fastapi import APIRouter
+from api import random_recipes, recipe_detail, recipes, recommend, yolo_classes, ingredients, auth_router
+
+router = APIRouter()
+router.include_router(random_recipes.router)
+router.include_router(recipe_detail.router)
+router.include_router(recipes.router)
+router.include_router(recommend.router)
+router.include_router(yolo_classes.router)
+router.include_router(auth_router.router)
+router.include_router(ingredients.router)
