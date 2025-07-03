@@ -34,31 +34,55 @@ def get_recipes(
     if method:
         params["cat1"] = method
 
-    # theme만 단독으로 있을 경우 theme 전용 URL로 전환
-    if theme and not ingredients:
-        params = {"theme": theme}
-        url = f"{base_url2}?{urlencode(params)}"
-    else:
-        url = f"{base_url}?{urlencode(params)}"
-
-    print("✅ 최종 요청 URL:", url)
-
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, "html.parser")
-
     recipes = []
-    for card in soup.select("ul.common_sp_list_ul > li.common_sp_list_li")[:30]:
-        try:
-            title = card.select_one(".common_sp_caption_tit").get_text(strip=True)
-            img = card.select_one(".common_sp_thumb img")["src"]
-            link = "https://www.10000recipe.com" + card.select_one("a.common_sp_link")["href"]
-            recipes.append({
-                "title": title,
-                "image": img,
-                "link": link
-            })
-        except Exception as e:
-            print("❌ 파싱 에러:", e)
-            continue
+
+    if theme and not ingredients:
+        # theme 전용 URL 여러 페이지 순회 (1~4페이지)
+        for page in range(1, 5):
+            params_with_page = {"theme": theme, "page": page}
+            url = f"{base_url2}?{urlencode(params_with_page)}"
+            print("✅ 요청 URL:", url)
+
+            response = requests.get(url)
+            soup = BeautifulSoup(response.content, "html.parser")
+
+            cards = soup.select("ul.common_sp_list_ul > li.common_sp_list_li")
+            if not cards:
+                break  # 페이지에 더 이상 항목이 없음
+
+            for card in cards:
+                try:
+                    title = card.select_one(".common_sp_caption_tit").get_text(strip=True)
+                    img = card.select_one(".common_sp_thumb img")["src"]
+                    link = "https://www.10000recipe.com" + card.select_one("a.common_sp_link")["href"]
+                    recipes.append({
+                        "title": title,
+                        "image": img,
+                        "link": link
+                    })
+                except Exception as e:
+                    print("❌ 파싱 에러:", e)
+                    continue
+    else:
+        # 기본 검색 조건 (재료, 종류, 상황 등 포함)
+        url = f"{base_url}?{urlencode(params)}"
+        print("✅ 요청 URL:", url)
+
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, "html.parser")
+
+        for card in soup.select("ul.common_sp_list_ul > li.common_sp_list_li")[:30]:
+            try:
+                title = card.select_one(".common_sp_caption_tit").get_text(strip=True)
+                img = card.select_one(".common_sp_thumb img")["src"]
+                link = "https://www.10000recipe.com" + card.select_one("a.common_sp_link")["href"]
+                recipes.append({
+                    "title": title,
+                    "image": img,
+                    "link": link
+                })
+            except Exception as e:
+                print("❌ 파싱 에러:", e)
+                continue
 
     return {"results": recipes, "count": len(recipes)}
