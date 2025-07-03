@@ -11,6 +11,7 @@ import requests
 from urllib.parse import urlencode
 
 
+
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -247,3 +248,16 @@ def get_yolo_classes():
         return classes
     except Exception as e:
         return {"error": str(e)}
+
+
+# DB초기화
+from db.init_db import init_db
+
+@app.on_event("startup")
+def on_startup():
+    init_db()
+
+from routers.auth_router import auth_router
+
+# 라우터 등록
+app.include_router(auth_router, prefix="/api")
