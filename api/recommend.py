@@ -9,6 +9,8 @@ from utils.prompt import filter_recipes_include_only
 from utils.prompt import build_prompt_with_context
 import config
 import pandas as pd
+from db.connection import SessionLocal
+from utils.recipe_service import fetch_recipes_from_10000recipe
 
 
 router = APIRouter()
@@ -28,8 +30,9 @@ async def recommend_recipe(req: RecipeRequest):
     ingredients = req.ingredients
     print(f"🔍 Ingredients received: {ingredients}")
 
-    # # Get recipes
-    # recipes_dict = get_recipes(ingredients=ingredients.split(","))
+    # Get recipes
+    # with SessionLocal() as db:
+    #     recipes_dict = fetch_recipes_from_10000recipe(db, ingredients=ingredients.split(","))
     # recipes = recipes_dict["results"]  # 리스트만 추출
     # print(f"🔍 Recipes found: {len(recipes)}")
     # print(f"🔍 Recipes : {recipes}")
