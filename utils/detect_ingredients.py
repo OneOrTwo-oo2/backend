@@ -9,5 +9,6 @@ def detect_ingredient(image_path):
     labels = []
     for det in detections:
         labels.append(det['label'])
+    labels = list(set(labels))
     
     return labels

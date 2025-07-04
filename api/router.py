@@ -7,7 +7,7 @@ router.include_router(recipe_detail.router)
 router.include_router(recipes.router)
 router.include_router(recommend.router)
 router.include_router(yolo_classes.router)
-router.include_router(auth_router.router)
+router.include_router(auth_router.router,prefix="/api")
 router.include_router(ingredients.router)
 router.include_router(bookmark.router,prefix="/api")
 

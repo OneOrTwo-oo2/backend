@@ -85,7 +85,7 @@ def load_finetuned_clip(model_path, device="cuda"):
     model_name = "ViT-B-32"
     pretrained = "openai"
     
-    model, _, preprocess = open_clip.create_model_and_transforms(model_name, pretrained=pretrained, device=device)
+    model, _, preprocess = open_clip.create_model_and_transforms(model_name, pretrained=pretrained, device=device, force_quick_gelu=True)
     if os.path.exists(model_path):
         print('using pretrained model')
         model.load_state_dict(torch.load(model_path, map_location=device))
