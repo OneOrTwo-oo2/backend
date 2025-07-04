@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import declarative_base, relationship
 
+
 Base = declarative_base()
 
 # 사용자
@@ -11,7 +12,7 @@ class User(Base):
 
     allergies = relationship("UserAllergy", back_populates="user", cascade="all, delete")
     diseases = relationship("UserDisease", back_populates="user", cascade="all, delete")
-
+    bookmarks = relationship("Bookmark", back_populates="user", cascade="all, delete")
 
 # 알러지 정보
 class Allergy(Base):
@@ -66,3 +67,28 @@ class UserDisease(Base):
     def __init__(self, user_id, disease_id):
         self.user_id = user_id
         self.disease_id = disease_id
+
+# ✅ 레시피 테이블
+class Recipe(Base):
+    __tablename__ = "recipes"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255))
+    image = Column(String(500))
+    summary = Column(String(1000))
+    link = Column(String(255), unique=True)  # 중복 방지를 위한 unique 링크
+
+    bookmarks = relationship("Bookmark", back_populates="recipe", cascade="all, delete")
+
+# ✅ 북마크 테이블
+class Bookmark(Base):
+    __tablename__ = "bookmarks"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("User.user_id", ondelete="CASCADE"))
+    recipe_id = Column(Integer, ForeignKey("recipes.id", ondelete="CASCADE"))
+
+    user = relationship("User", back_populates="bookmarks")
+    recipe = relationship("Recipe", back_populates="bookmarks")
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'recipe_id', name='user_id_recipe_id_uc'),
+    )
