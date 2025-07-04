@@ -37,7 +37,7 @@ def add_bookmark_with_recipe(data: BookmarkCreate, db: Session = Depends(get_db)
         bookmark = Bookmark(user_id=data.user_id, recipe_id=recipe.id)
         db.add(bookmark)
         db.commit()
-        return {"message": "북마크 완료!"}
+        return {"message": "북마크 완료!", "recipe_id": recipe.id}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"북마크 실패: {str(e)}")
