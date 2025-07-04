@@ -4,58 +4,95 @@ import ast
 from langchain.prompts import PromptTemplate
 
 # ✅ prompt 작성
-def build_prompt(ingredients: str, detailed_recipes: str, context: str = None, disease: str = None) -> str:
+def build_prompt(
+    ingredients,
+    filtered_recipes,
+    context=None,
+    disease=None,
+    allergies=None,
+    diet_preference=None
+) -> str:
+    
+    # 기본 사용자 정보 문자열 구성
+    user_info = f"입력한 재료: {ingredients}"
+    if allergies and allergies != "해당없음":
+        user_info += f"\n알러지 정보: {allergies}"
+    if diet_preference and diet_preference != "해당없음":
+        user_info += f"\n식단 선호: {diet_preference}"
+    if disease and disease != "해당없음":
+        user_info += f"\n질환 정보: {disease}"
+
+    # context가 존재하는 경우
     if disease and context:
-        prompt = f"""다음 문서를 참고하여 '{disease}' 질환을 가진 사용자를 위한 적절한 식단을 고려해주세요.  
-사용자가 입력한 재료인 '{ingredients}'를 활용하여, '{detailed_recipes}' 중에서 가장 적절한 하나의 레시피를 한국어로 추천해주세요.
+        prompt = f"""당신은 요리와 영양에 정통한 전문가입니다.
+
+{user_info}
+
+아래 문서를 참고하여 '{disease}' 질환을 가진 사용자를 위한 적절한 레시피를 추천해주세요.
+
+후보 레시피 목록:
+{filtered_recipes}
 
 요청사항:
-- 해당 레시피의 과정과 재료를 알려주세요.
-- 어떤 점에서 '{disease}' 환자에게 이 레시피를 추천해줬는지 구체적으로 설명해주세요.
+- 위 정보를 종합해 가장 적절한 레시피 하나를 추천해주세요.
+- 반드시 레시피 목록에서 고른 레시피여야 합니다.
+- 해당 레시피의 재료와 조리 과정을 알려주세요.
+- 어떤 점에서 '{disease}' 환자에게 이 레시피가 적합한지 설명해주세요.
 
 참고 문서:
 {context}
 """
     else:
-        prompt = f"""사용자가 입력한 재료인 '{ingredients}'를 활용하여, '{detailed_recipes}' 중에서 가장 적절한 하나의 레시피를 한국어로 추천해주세요.
+        # 일반 사용자 프롬프트
+        prompt = f"""당신은 요리 전문가입니다.
 
-요청사항:
-- 해당 레시피의 과정과 재료를 알려주세요.
-"""
-    return prompt
+{user_info}
 
-
-# RAG 프롬프트 생성 함수
-def build_prompt_with_context(
-    ingredients,
-    filtered_recipes,
-    context,
-    disease,
-    allergies,
-    diet_preference
-) -> str:
-    prompt = f"""당신은 요리와 영양에 정통한 전문가입니다.
-
-사용자 정보:
-- 입력 재료: {ingredients}
-- 질환: {disease or "없음"}
-- 알러지: {allergies}
-- 선호 식단단: {diet_preference}
-
-참고 문서:
-{context or "해당 없음"}
-
-아래는 추천 후보 레시피 목록입니다:
+후보 레시피 목록:
 {filtered_recipes}
 
 요청사항:
-- 위 조건을 종합해 가장 적절한 레시피 하나를 추천해주세요.
-- 추천한 레시피의 재료, 과정을 정리해주세요.
-- 추천 이유를 명확히 설명해주세요.
-- 총 후보 레시피 수를 알려주세요.
+- 위 정보를 종합해 가장 적절한 레시피 하나를 추천해주세요.
+- 반드시 레시피 목록에서 고른 레시피여야 합니다.
+- 해당 레시피의 재료와 조리 과정을 알려주세요.
 """
     return prompt
 
+# # RAG 프롬프트 생성 함수
+# def build_prompt_with_context(
+#     ingredients,
+#     filtered_recipes,
+#     context=None,
+#     disease=None,
+#     allergies=None,
+#     diet_preference=None
+# ) -> str:
+#     # 조건별 정보 처리
+#     disease_text = f"- 질환: {disease}" if disease and disease != "해당없음" else ""
+#     allergies_text = f"- 알러지: {allergies}" if allergies and allergies != "해당없음" else ""
+#     diet_text = f"- 선호 식단: {diet_preference}" if diet_preference and diet_preference != "해당없음" else ""
+    
+#     # context가 있을 경우만 문서 포함
+#     context_section = f"\n참고 문서:\n{context}\n" if disease and context and context != "해당없음" else ""
+
+#     return f"""당신은 요리와 영양에 정통한 전문가입니다.
+
+# 사용자 정보:
+# - 입력 재료: {ingredients}
+# {disease_text}
+# {allergies_text}
+# {diet_text}
+# {context_section}
+# 아래는 추천 후보 레시피 목록입니다:
+# {filtered_recipes}
+
+# 요청사항:
+# - 사용자 정보를 기반으로, 위 레시피 중 입력 재료와 가장 유사한 재료를 사용하는 **가장 적절한 레시피 하나만** 선택하여 추천해주세요.
+# - 사용자 정보의 질환에 {disease}이 있다면, 위 참고 문서 기반으로 {disease}의 식단 정보를 참고하여 위 레시피 중 **가장 적절한 하나만** 선택하여 추천해주세요.
+# - 반드시 레시피 목록에서 고른 레시피여야 합니다.
+# - 추천 이유를 설명해주세요.
+# - 해당 레시피의 재료와 조리 과정을 요약해주세요.
+# """
 
 # ✅ 포맷 변환 함수 (레시피 정보 json -> 자연어 포맷)
 def format_recipes_for_prompt(detailed_recipes: List[dict], max_count=5) -> str:
@@ -75,28 +112,34 @@ def format_recipes_for_prompt(detailed_recipes: List[dict], max_count=5) -> str:
 
 # ✅ 알러지 제외, 재료가 포함된 레시피만 추출
 def filter_recipes_include_only(df: pd.DataFrame,
-                                 selected_ingredients: list,
-                                 allergy_list: list) -> pd.DataFrame:
+                                 ingredients: str,
+                                 allergy: str) -> pd.DataFrame:
     
+    # 입력 문자열을 리스트로 변환
+    selected_ingredients = [item.strip() for item in ingredients.split(',')] if ingredients else []
+    allergy_list = [item.strip() for item in allergy.split(',')] if allergy and allergy.strip() != "해당없음" else []
+
     def is_valid(row):
         try:
-            ingredients = ast.literal_eval(row["재료"])
-            clean_ingredients = [i.split()[0] for i in ingredients if i]  # "감자 2개" → "감자"
+            row_ingredients = ast.literal_eval(row["재료"])
+            clean_ingredients = [i.split()[0] for i in row_ingredients if i]
         except Exception:
             return False
 
-        # ❌ 알러지 재료가 하나라도 포함되어 있으면 제외
+        # ❌ 알러지 성분이 하나라도 포함되면 제외
         if any(allergen in clean_ingredients for allergen in allergy_list):
             return False
 
-        # ✅ 선택한 재료 중 하나라도 포함되어 있으면 포함
-        if any(sel in clean_ingredients for sel in selected_ingredients):
-            return True
-        
-        return False
+        # ✅ 선택한 재료가 하나라도 포함되면 통과
+        return any(sel in clean_ingredients for sel in selected_ingredients)
 
-    return df[df.apply(is_valid, axis=1)].reset_index(drop=True)
+    filtered_df = df[df.apply(is_valid, axis=1)].reset_index(drop=True)
 
+    # 최대 300개까지만 반환
+    if len(filtered_df) > 100:
+        filtered_df = filtered_df.sample(n=300, random_state=42).reset_index(drop=True)
+
+    return filtered_df
 
 # CSV 일부 레시피를 요약 포맷으로 변환
 def format_recipes_for_prompt(df: pd.DataFrame) -> str:
