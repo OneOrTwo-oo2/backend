@@ -1,12 +1,12 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from api.recipes import get_recipes
-from utils.prompt import build_prompt, format_recipes_for_prompt
+from utils.prompt import format_recipes_for_prompt
 from utils.watsonx import ask_watsonx
 from utils.crawl import crawl_recipe_detail_bulk
 from utils.youtube import search_youtube_videos
 from utils.prompt import filter_recipes_include_only
-from utils.prompt import build_prompt_with_context
+from utils.prompt import build_prompt
 import config
 import pandas as pd
 from db.connection import SessionLocal
@@ -28,7 +28,8 @@ async def recommend_recipe(req: RecipeRequest):
     vectordb = config.vector_db
 
     ingredients = req.ingredients
-    print(f"🔍 Ingredients received: {ingredients}")
+    ingredients_list = [item.strip() for item in ingredients.split(",")]
+    print(f"🔍 Ingredients received: {ingredients_list}")
 
     # Get recipes
     # with SessionLocal() as db:
@@ -44,21 +45,24 @@ async def recommend_recipe(req: RecipeRequest):
     # detailed_recipes = format_recipes_for_prompt(detailed_recipes)
 
 
-    disease = '빈혈'   # 사용자 선호도 예시 / req.disease 추가해야함
-    allergies = '계란, 양파'
-    diet_preference='저탄수화물'
+    disease = '고혈압'   # 사용자 선호도 예시 / req.disease 추가해야함
+    allergies = '계란, 달걀, 양파'
+    diet_preference='채식주의'
 
 
     # 만개의 레시피 load
-    recipes = pd.read_csv("./vector_store/recipe_cat4.csv")
+    recipes = pd.read_csv("./vector_store/recipe_cat4_reindexed.csv")
+    print(f"🔍 total recipes: {recipes.shape[0]}")
     filtered_recipes = filter_recipes_include_only (recipes, ingredients, allergies)
     print(f"🔍 filtered_recipes: {filtered_recipes.shape[0]}")
+    filtered_recipes = format_recipes_for_prompt(filtered_recipes)
     
-    # 관련 context 추출 (Top 5)
+    # 관련 context 추출 (Top 3)
     if disease:
         # 질환이 있는 경우, 벡터 DB에서 문맥 검색
-        query = f"{disease} 식단"
-        docs = vectordb.similarity_search(query, k=5)
+        #query = f"{disease} 식단 관리 방법만 가져와, 숫자 뒤에 {disease} 키워드가 시작점이고 다음 숫자 앞까지의 텍스트만 가져와"
+        query = f"{disease} 식단 관리 방법만 가져와, 숫자.{disease} 텍스트부터 검색해"     
+        docs = vectordb.similarity_search(query, k=3)
         context = "\n\n".join([doc.page_content for doc in docs])
     else:
         context = None
@@ -66,7 +70,7 @@ async def recommend_recipe(req: RecipeRequest):
     print(context)
 
     # Build prompt
-    prompt = build_prompt_with_context(ingredients=ingredients, 
+    prompt = build_prompt(ingredients=ingredients, 
                                        filtered_recipes = filtered_recipes, 
                                        context=context, 
                                        disease=disease,
