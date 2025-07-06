@@ -14,6 +14,8 @@ router = APIRouter()
 class GoogleLoginRequest(BaseModel):
     credential: str
 
+from utils.jwt_handler import create_access_token
+
 @router.post("/auth/google-login")
 def google_login(payload: GoogleLoginRequest):
     token = payload.credential
@@ -21,13 +23,11 @@ def google_login(payload: GoogleLoginRequest):
         raise HTTPException(status_code=400, detail="No token provided")
 
     try:
-        # ✅ .env에서 가져온 CLIENT_ID로 검증
         idinfo = id_token.verify_oauth2_token(
             token,
             grequests.Request(),
-            audience = GOOGLE_CLIENT_ID
+            audience=GOOGLE_CLIENT_ID
         )
-
         email = idinfo["email"]
 
         db = SessionLocal()
@@ -41,11 +41,15 @@ def google_login(payload: GoogleLoginRequest):
                 db.commit()
                 db.refresh(user)
                 is_new = True
+
+            # ✅ JWT 토큰 발급
+            access_token = create_access_token({"user_id": user.user_id, "email": user.user_email})
+
         finally:
-            db.close()  # ✅ 연결 해제는 finally로 안전하게
+            db.close()
 
         return {
-            "token": "임의의_토큰",  # 나중에 JWT로 변경 가능
+            "token": access_token,
             "isNewUser": is_new,
             "user_email": email
         }

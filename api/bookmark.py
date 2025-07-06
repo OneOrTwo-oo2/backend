@@ -4,19 +4,33 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from db.connection import get_db
 from db.models import Bookmark, Recipe
+from utils.jwt_handler import decode_access_token
+from fastapi import Header
 
 router = APIRouter()
 
+# jwt에서 직접 유저아이디를 추출하기 때문에 유저 아이디 삭제
 class BookmarkCreate(BaseModel):
-    user_id: int
     title: str
     image: str
     summary: str = ""
     link: str
 
+# 유저id를 jwt로 추출하게 하는 함수
+def get_current_user_id(authorization: str = Header(...)) -> int:
+    try:
+        token = authorization.split(" ")[1]
+        payload = decode_access_token(token)
+        return payload["user_id"]
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
 # db에서 조회 후 새로운 레시피라면 추가하는 엔드포인트
 @router.post("/bookmark-with-recipe")
-def add_bookmark_with_recipe(data: BookmarkCreate, db: Session = Depends(get_db)):
+def add_bookmark_with_recipe(data: BookmarkCreate, user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)):
+
+    print("✅ user_id from JWT:", user_id)
+    print("✅ data from body:", data.dict())
     try:
         # 1. 레시피가 DB에 이미 있는지 확인
         recipe = db.query(Recipe).filter_by(link=data.link).first()
@@ -32,9 +46,14 @@ def add_bookmark_with_recipe(data: BookmarkCreate, db: Session = Depends(get_db)
             db.add(recipe)
             db.commit()
             db.refresh(recipe)
+        
+        # ✅ 중복 체크
+        existing = db.query(Bookmark).filter_by(user_id=user_id, recipe_id=recipe.id).first()
+        if existing:
+            return {"message": "이미 북마크됨", "recipe_id": recipe.id}
 
         # 3. 북마크 저장
-        bookmark = Bookmark(user_id=data.user_id, recipe_id=recipe.id)
+        bookmark = Bookmark(user_id=user_id, recipe_id=recipe.id)
         db.add(bookmark)
         db.commit()
         return {"message": "북마크 완료!", "recipe_id": recipe.id}
@@ -44,9 +63,9 @@ def add_bookmark_with_recipe(data: BookmarkCreate, db: Session = Depends(get_db)
 
 # 사용자 북마크 조회용 엔드포인트 추가
 @router.get("/bookmarks")
-def get_bookmarks(userId: int, db: Session = Depends(get_db)):
+def get_bookmarks(user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)):
     try:
-        bookmarks = db.query(Bookmark).filter_by(user_id=userId).all()
+        bookmarks = db.query(Bookmark).filter_by(user_id=user_id).all()
         result = []
         for b in bookmarks:
             recipe = db.query(Recipe).filter_by(id=b.recipe_id).first()
@@ -78,4 +97,3 @@ def delete_bookmark(userId: int, recipeId: int, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"삭제 실패: {str(e)}")
-

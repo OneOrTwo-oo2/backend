@@ -1,7 +1,5 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
-import os
 from config import DB_USER, DB_PASSWORD, DB_HOST, DB_NAME
 
 # DB 연결 엔진
