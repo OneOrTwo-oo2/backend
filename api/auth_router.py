@@ -5,8 +5,6 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as grequests
 from db.connection import SessionLocal
 from db.models import User
-import os
-from dotenv import load_dotenv
 from config import GOOGLE_CLIENT_ID
 
 router = APIRouter()
