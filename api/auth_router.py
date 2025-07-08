@@ -90,3 +90,20 @@ def refresh_token(request: Request):
 @router.get("/auth/user")
 def get_authenticated_user(user = Depends(get_current_user_from_cookie)):
     return {"user_id": user.user_id, "email": user.user_email}
+
+
+# 로그인 페이지 진입시 쿠키 리셋
+@router.post("/auth/clear-cookie")
+def clear_cookie():
+    res = JSONResponse(content={"message": "쿠키 초기화 완료"})
+    res.delete_cookie("access_token", path="/")
+    res.delete_cookie("refresh_token", path="/")
+    return res
+
+# 기존 로그아웃 방식(로컬스토리지)에서 쿠키방식으로 전환해서 만든 함수
+@router.post("/auth/logout")
+def logout():
+    res = JSONResponse(content={"message": "로그아웃 완료"})
+    res.delete_cookie("access_token", path="/")
+    res.delete_cookie("refresh_token", path="/")
+    return res
