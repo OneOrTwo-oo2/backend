@@ -1,41 +1,31 @@
-# api/bookmark.py
+# ✅ 북마크 라우터 (R2R 기반 인증 적용)
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from db.connection import get_db
 from db.models import Bookmark, Recipe
-from utils.jwt_handler import decode_access_token
-from fastapi import Header
+from utils.jwt_handler import get_current_user_from_cookie
 
 router = APIRouter()
 
-# jwt에서 직접 유저아이디를 추출하기 때문에 유저 아이디 삭제
+# 📌 북마크 등록 요청 형식
 class BookmarkCreate(BaseModel):
     title: str
     image: str
     summary: str = ""
     link: str
 
-# 유저id를 jwt로 추출하게 하는 함수
-def get_current_user_id(authorization: str = Header(...)) -> int:
-    try:
-        token = authorization.split(" ")[1]
-        payload = decode_access_token(token)
-        return payload["user_id"]
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=str(e))
 
-# db에서 조회 후 새로운 레시피라면 추가하는 엔드포인트
+# ✅ 북마크 생성 (레시피까지 저장)
 @router.post("/bookmark-with-recipe")
-def add_bookmark_with_recipe(data: BookmarkCreate, user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)):
-
-    print("✅ user_id from JWT:", user_id)
-    print("✅ data from body:", data.dict())
+def add_bookmark_with_recipe(
+    data: BookmarkCreate,
+    user = Depends(get_current_user_from_cookie),
+    db: Session = Depends(get_db)
+):
     try:
-        # 1. 레시피가 DB에 이미 있는지 확인
         recipe = db.query(Recipe).filter_by(link=data.link).first()
 
-        # 2. 없으면 새로 저장
         if not recipe:
             recipe = Recipe(
                 title=data.title,
@@ -46,26 +36,29 @@ def add_bookmark_with_recipe(data: BookmarkCreate, user_id: int = Depends(get_cu
             db.add(recipe)
             db.commit()
             db.refresh(recipe)
-        
-        # ✅ 중복 체크
-        existing = db.query(Bookmark).filter_by(user_id=user_id, recipe_id=recipe.id).first()
+
+        existing = db.query(Bookmark).filter_by(user_id=user.user_id, recipe_id=recipe.id).first()
         if existing:
             return {"message": "이미 북마크됨", "recipe_id": recipe.id}
 
-        # 3. 북마크 저장
-        bookmark = Bookmark(user_id=user_id, recipe_id=recipe.id)
+        bookmark = Bookmark(user_id=user.user_id, recipe_id=recipe.id)
         db.add(bookmark)
         db.commit()
         return {"message": "북마크 완료!", "recipe_id": recipe.id}
+
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"북마크 실패: {str(e)}")
 
-# 사용자 북마크 조회용 엔드포인트 추가
+
+# ✅ 내 북마크 목록 조회
 @router.get("/bookmarks")
-def get_bookmarks(user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)):
+def get_bookmarks(
+    user = Depends(get_current_user_from_cookie),
+    db: Session = Depends(get_db)
+):
     try:
-        bookmarks = db.query(Bookmark).filter_by(user_id=user_id).all()
+        bookmarks = db.query(Bookmark).filter_by(user_id=user.user_id).all()
         result = []
         for b in bookmarks:
             recipe = db.query(Recipe).filter_by(id=b.recipe_id).first()
@@ -81,13 +74,16 @@ def get_bookmarks(user_id: int = Depends(get_current_user_id), db: Session = Dep
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"조회 실패: {str(e)}")
 
-# 북마크 삭제용 엔드포인트
-@router.delete("/bookmark")
-def delete_bookmark(userId: int, recipeId: int, db: Session = Depends(get_db)):
-    try:
-        # filter()를 사용하여 명시적으로 필터링
-        bookmark = db.query(Bookmark).filter(Bookmark.user_id == userId, Bookmark.recipe_id == recipeId).first()
 
+# ✅ 북마크 삭제 (userId 제거)
+@router.delete("/bookmark")
+def delete_bookmark(
+    recipeId: int,
+    user = Depends(get_current_user_from_cookie),
+    db: Session = Depends(get_db)
+):
+    try:
+        bookmark = db.query(Bookmark).filter_by(user_id=user.user_id, recipe_id=recipeId).first()
         if not bookmark:
             raise HTTPException(status_code=404, detail="북마크가 존재하지 않습니다.")
 

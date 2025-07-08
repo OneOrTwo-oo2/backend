@@ -1,7 +1,7 @@
 import jwt
 from datetime import datetime, timedelta
 from config import SECRET_KEY
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from db.connection import SessionLocal
@@ -20,7 +20,15 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# ✅ JWT 디코딩
+
+# ✅ JWT 리프레쉬 토큰 생성 // 안하면 토큰 탈취의 위험이 있음
+def create_refresh_token(data: dict, expires_delta: timedelta = timedelta(days=7)):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + expires_delta
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+# ✅ JWT 어세스 디코딩
 def decode_access_token(token: str):
     try:
         return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -28,9 +36,26 @@ def decode_access_token(token: str):
         raise Exception("Access token expired")
     except jwt.PyJWTError:
         raise Exception("Invalid token")
+    
+# ✅ JWT 디코딩 리프레쉬 토큰 보안 강화를 위해!
+def decode_refresh_token(token: str):
+    try:
+        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise Exception("Refresh token expired")
+    except jwt.PyJWTError:
+        raise Exception("Invalid refresh token")
 
-# ✅ FastAPI 의존성: 현재 유저 가져오기 // 폴더 생성에서 사용
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(lambda: SessionLocal())) -> User:
+
+# ✅ R2R 방식: 쿠키에서 access_token 추출하여 유저 객체 반환// 기존
+def get_current_user_from_cookie(
+    request: Request,
+    db: Session = Depends(lambda: SessionLocal())
+) -> User:
+    token = request.cookies.get("access_token")  # ✅ 쿠키에서 토큰 추출
+    if not token:
+        raise HTTPException(status_code=401, detail="Access token 누락")
+
     try:
         payload = decode_access_token(token)
         user_id = payload.get("user_id")
