@@ -9,7 +9,8 @@ from db.models import User
 
 SECRET_KEY = SECRET_KEY  # 환경변수로 관리하는 게 좋음
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES = 15  # 리프래쉬 토큰을 따로 만들었기 때문에 15분으로 조정! 
+REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/google-login")
 
@@ -22,7 +23,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 
 
 # ✅ JWT 리프레쉬 토큰 생성 // 안하면 토큰 탈취의 위험이 있음
-def create_refresh_token(data: dict, expires_delta: timedelta = timedelta(days=7)):
+def create_refresh_token(data: dict, expires_delta: timedelta = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)):
     to_encode = data.copy()
     expire = datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire})
