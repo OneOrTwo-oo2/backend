@@ -21,6 +21,7 @@ DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_NAME = os.getenv("DB_NAME")
 DB_HOST = os.getenv("DB_HOST")
+SECRET_KEY = os.getenv("SECRET_KEY") # JWT 토큰 인증키 우리가 지정하는 것!
 
 # ✅ access token 전역 저장
 ACCESS_TOKEN = None

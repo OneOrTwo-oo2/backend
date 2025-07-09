@@ -1,7 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import declarative_base, relationship
 
-
 Base = declarative_base()
 
 # 사용자
@@ -13,6 +12,7 @@ class User(Base):
     allergies = relationship("UserAllergy", back_populates="user", cascade="all, delete")
     diseases = relationship("UserDisease", back_populates="user", cascade="all, delete")
     bookmarks = relationship("Bookmark", back_populates="user", cascade="all, delete")
+    bookmark_folders = relationship("BookmarkFolder", back_populates="user", cascade="all, delete")
 
 # 알러지 정보
 class Allergy(Base):
@@ -22,25 +22,19 @@ class Allergy(Base):
 
     users = relationship("UserAllergy", back_populates="allergy", cascade="all, delete")
 
-
-# 유저 알러지 중간 테이블
+# 유저 알러지 중간 테이블 (인조키 사용)
 class UserAllergy(Base):
     __tablename__ = "user_allergy"
-    user_id = Column(Integer, ForeignKey("User.user_id", ondelete="CASCADE"), primary_key=True)
-    allergy_id = Column(Integer, ForeignKey("Allergy.id", ondelete="CASCADE"), primary_key=True)
-
-    __table_args__ = (
-        UniqueConstraint('user_id', 'allergy_id', name='user_id_allergy_id_uc'),
-    )
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("User.user_id", ondelete="CASCADE"))
+    allergy_id = Column(Integer, ForeignKey("Allergy.id", ondelete="CASCADE"))
 
     user = relationship("User", back_populates="allergies")
     allergy = relationship("Allergy", back_populates="users")
 
-    # 복합 PK를 위해
-    def __init__(self, user_id, allergy_id):
-        self.user_id = user_id
-        self.allergy_id = allergy_id
-
+    __table_args__ = (
+        UniqueConstraint('user_id', 'allergy_id', name='user_id_allergy_id_uc'),
+    )
 
 # 질환 정보
 class ChronicDisease(Base):
@@ -50,36 +44,33 @@ class ChronicDisease(Base):
 
     users = relationship("UserDisease", back_populates="disease", cascade="all, delete")
 
-
-# 유저 질환 중간 테이블
+# 유저 질환 중간 테이블 (인조키 사용)
 class UserDisease(Base):
     __tablename__ = "user_disease"
-    user_id = Column(Integer, ForeignKey("User.user_id", ondelete="CASCADE"), primary_key=True)
-    disease_id = Column(Integer, ForeignKey("ChronicDisease.id", ondelete="CASCADE"), primary_key=True)
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("User.user_id", ondelete="CASCADE"))
+    disease_id = Column(Integer, ForeignKey("ChronicDisease.id", ondelete="CASCADE"))
+
+    user = relationship("User", back_populates="diseases")
+    disease = relationship("ChronicDisease", back_populates="users")
 
     __table_args__ = (
         UniqueConstraint('user_id', 'disease_id', name='user_id_disease_id_uc'),
     )
 
-    user = relationship("User", back_populates="diseases")
-    disease = relationship("ChronicDisease", back_populates="users")
-
-    def __init__(self, user_id, disease_id):
-        self.user_id = user_id
-        self.disease_id = disease_id
-
-# ✅ 레시피 테이블
+# 레시피
 class Recipe(Base):
     __tablename__ = "recipes"
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255))
     image = Column(String(500))
     summary = Column(String(1000))
-    link = Column(String(255), unique=True)  # 중복 방지를 위한 unique 링크
+    link = Column(String(255), unique=True)
 
     bookmarks = relationship("Bookmark", back_populates="recipe", cascade="all, delete")
+    folder_recipes = relationship("FolderRecipe", back_populates="recipe", cascade="all, delete")
 
-# ✅ 북마크 테이블
+# 북마크
 class Bookmark(Base):
     __tablename__ = "bookmarks"
     id = Column(Integer, primary_key=True, index=True)
@@ -91,4 +82,28 @@ class Bookmark(Base):
 
     __table_args__ = (
         UniqueConstraint('user_id', 'recipe_id', name='user_id_recipe_id_uc'),
+    )
+
+# ✅ 북마크 폴더
+class BookmarkFolder(Base):
+    __tablename__ = "bookmark_folders"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("User.user_id", ondelete="CASCADE"))
+    name = Column(String(100), nullable=False)
+
+    user = relationship("User", back_populates="bookmark_folders")
+    folder_recipes = relationship("FolderRecipe", back_populates="folder", cascade="all, delete")
+
+# ✅ 폴더-레시피 중간 테이블
+class FolderRecipe(Base):
+    __tablename__ = "folder_recipes"
+    id = Column(Integer, primary_key=True)
+    folder_id = Column(Integer, ForeignKey("bookmark_folders.id", ondelete="CASCADE"))
+    recipe_id = Column(Integer, ForeignKey("recipes.id", ondelete="CASCADE"))
+
+    folder = relationship("BookmarkFolder", back_populates="folder_recipes")
+    recipe = relationship("Recipe", back_populates="folder_recipes")
+
+    __table_args__ = (
+        UniqueConstraint('folder_id', 'recipe_id', name='folder_id_recipe_id_uc'),
     )
