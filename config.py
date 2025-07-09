@@ -26,4 +26,6 @@ DB_HOST = os.getenv("DB_HOST")
 ACCESS_TOKEN = None
 
 # vector_db 사전 저장
-vector_db = None
+vector_db_disease = None
+vector_db_recipe = None
+embedding_model = None
