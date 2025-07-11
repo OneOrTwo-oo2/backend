@@ -27,4 +27,6 @@ SECRET_KEY = os.getenv("SECRET_KEY") # JWT 토큰 인증키 우리가 지정하�
 ACCESS_TOKEN = None
 
 # vector_db 사전 저장
-vector_db = None
+vector_db_disease = None
+vector_db_recipe = None
+embedding_model = None
