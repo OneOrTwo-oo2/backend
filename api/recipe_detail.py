@@ -13,6 +13,20 @@ def get_recipe_detail(link: str):
 
         summary = soup.select_one("div.view2_summary").get_text(strip=True) if soup.select_one("div.view2_summary") else "요약 없음"
 
+        # ✅ 재료
+        ingredients = []
+        ingre_elements = soup.select("div#divConfirmedMaterialArea ul li")
+
+        for li in ingre_elements:
+            # '구매' 버튼 제거
+            for tag in li.select("button"):
+                tag.decompose()
+
+            # 텍스트 추출 후 '구매'라는 단어 제거
+            text = li.get_text(strip=True).replace("구매", "").strip()            
+            if text:
+                ingredients.append(text)
+
         # ✅ 조리 순서
         steps = []
         step_elements = soup.select("div.view_step > div.view_step_cont")
@@ -28,6 +42,7 @@ def get_recipe_detail(link: str):
 
         return {
             "summary": summary,
+            "ingredients": ingredients,
             "steps": steps,
             "link": link
         }
