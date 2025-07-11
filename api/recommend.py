@@ -44,7 +44,9 @@ async def recommend_recipe(req: RecipeRequest):
                            vectordb=vectordb_recipe,
                             model=model, 
                             top_k=top_k,
-                            exclude_ingredients_str=allergies
+                            exclude_ingredients_str=allergies,
+                            difficulty_levels_str=None,
+                            types_str=None
                             )
 
     filtered_recipes = "\n\n".join([format_recipe(doc, i+1) for i, (doc, _) in enumerate(results)])
