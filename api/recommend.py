@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from api.recipes import get_recipes
 from utils.crawl import crawl_recipe_detail_bulk
 from utils.youtube import search_youtube_videos
-from utils.prompt import build_prompt, format_recipe, search_top_k
+from utils.prompt import build_prompt, format_recipe, search_top_k, print_watsonx_response
 import config
 import pandas as pd
 from db.connection import SessionLocal
@@ -31,13 +31,13 @@ async def recommend_recipe(req: RecipeRequest):
     print(f"🔍 Ingredients received: {ingredients}")
 
     # 사용자 선호도 예시 / req.disease 추가해야함
-    disease = '당뇨'   
+    disease = '통풍'   
     allergies = '계란, 달걀, 새우'
-    diet_preference='채식주의'
+    diet_preference='저탄수화물'
 
     # ✅ 유사 레시피 검색 (쿼리용 문자열 재조합, Top 50)
     query = ingredients
-    top_k = 20
+    top_k = 15
     
     start = time.time()
     results = search_top_k(query=query, 
@@ -76,14 +76,14 @@ async def recommend_recipe(req: RecipeRequest):
 
     # Ask Watsonx
     ai_response = ask_watsonx(prompt)
-    print(f"🔍 Watsonx response: {ai_response}") 
+    print(f"🔍 Watsonx response: {ai_response}\n") 
     
     # YouTube links
     # youtube_links = search_youtube_videos(ingredients)  # 재료 대신 요리 제목도 가능
     # print(f"🔍 YouTube links: {youtube_links}")
     
     return {
-        "result": ai_response,
+        "result": print_watsonx_response(ai_response),
         #"youtube": youtube_links
     }
 

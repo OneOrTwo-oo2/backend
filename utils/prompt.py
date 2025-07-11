@@ -5,6 +5,7 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.schema import Document
 from tqdm import tqdm
 import time
+import json
 
 def search_top_k(
     query,
@@ -80,7 +81,7 @@ def build_prompt(
     allergies=None,
     diet_preference=None
 ) -> str:
-    
+    # 사용자 입력 정보 요약
     user_info = f"입력한 재료: {ingredients}"
     if allergies and allergies != "해당없음":
         user_info += f"\n알러지 정보: {allergies}"
@@ -89,41 +90,107 @@ def build_prompt(
     if disease and disease != "해당없음":
         user_info += f"\n질환 정보: {disease}"
 
-    if disease and context:
-        prompt = f"""당신은 요리와 영양에 정통한 전문가입니다.
+    # 프롬프트 조립
+    prompt = f"""<role>
+당신은 요리와 영양에 정통한 최고의 AI 셰프입니다.
+</role>
 
+<user_info>
 {user_info}
+</user_info>
 
-아래 문서를 참고하여 '{disease}' 질환을 가진 사용자를 위한 적절한 레시피를 추천해주세요.
-
-후보 레시피 목록:
+<candidate_recipes>
 {filtered_recipes}
-
-요청사항:
-- 위 정보를 종합해 가장 적절한 레시피 3개를 추천해주세요.
-- 반드시 레시피 목록에서 고른 레시피여야 합니다.
-- 입력한 재료와 가장 비슷한 재료를 사용한 레시피를 우선으로 추천해주세요.
-- 해당 레시피의 제목, 인분, 난이도, 조리시간, 재료, 조리순서를 알려주세요 (해당 레시피와 똑같이!).
-- 어떤 점에서 '{disease}' 환자에게 이 레시피가 적합한지 설명해주세요.
-- '{disease}' 환자에게 좋은 식습관을 간단하게 설명해주세요.
-- 마지막에 추천한 레시피들의 URL을 함께 제공해주세요.
-
-참고 문서:
-{context}
+</candidate_recipes>
 """
-    else:
-        prompt = f"""당신은 요리 전문가입니다.
 
-{user_info}
+    # context가 있을 경우
+    if disease and context:
+        prompt += f"""
+<context>
+{context}
+</context>
+"""
 
-후보 레시피 목록:
-{filtered_recipes}
+    prompt += """
+<instructions>
+1. 위 정보를 참고해 사용자에게 가장 적합한 레시피 3개를 추천해주세요.
+2. 질환 정보가 있다면, `<context>` 문서를 참고해 추천 이유를 반드시 작성해주세요.
+3. 입력한 재료와 유사하거나 포함된 레시피를 우선적으로 선택해주세요.
+4. 반드시 아래 JSON 형식을 따라 응답하세요. 설명 없이 JSON 객체만 반환해야 합니다.
+</instructions>
 
-요청사항:
-- 위 정보를 종합해 가장 적절한 레시피 3개를 추천해주세요.
-- 반드시 후보 레시피 목록에서 고른 레시피여야 합니다.
-- 입력한 재료와 가장 비슷한 재료를 사용한 레시피를 우선으로 추천해주세요.
-- 해당 레시피의 제목, 인분, 난이도, 조리시간, 재료, 조리순서를 알려주세요 (해당 레시피와 똑같이!).
-- 마지막에 추천한 레시피들의 URL을 함께 제공해주세요.
+<json_output_example>
+{
+  "recommended_recipes": [
+    {
+      "id": 1,
+      "title": "닭가슴살 샐러드",
+      "serving": "2인분",
+      "difficulty": "초급",
+      "cooking_time": "15분",
+      "ingredients": "닭가슴살, 양상추, 토마토",
+      "steps": "1. 닭가슴살을 삶는다. 2. 채소를 손질한다.",
+      "url": "http://example.com/recipe/1",
+      "recommendation_reason": "이 레시피는 사용자가 입력한 재료(닭가슴살, 양상추)를 활용하면서도, 고혈압 질환 정보를 고려해 나트륨이 적고 가공식품을 포함하지 않아 적합합니다. 또한 채식에 가까운 식단 선호와 알러지 정보(달걀 제외)를 반영하여 구성되었습니다.",
+      "dietary_tips": "고혈압 환자는 나트륨 섭취를 줄이고 채소를 충분히 섭취해야 합니다."
+    },
+    {
+      "id": 2,
+      "title": "...",
+      "serving": "...",
+      "difficulty": "...",
+      "cooking_time": "...",
+      "ingredients": "...",
+      "steps": "...",
+      "url": "..."
+  "recommendation_reason": "선택된 레시피들은 사용자의 재료, 식단 선호, 질환 및 알러지 정보를 바탕으로 필터링 및 우선순위화 되었습니다.",
+  },
+  "dietary_tips": "..."
+]
+}
+</json_output_example>
+
+
+<response>
+이제 위 형식을 따르는 JSON 응답을 생성해주세요.
+</response>
 """
     return prompt
+
+
+
+def print_watsonx_response(response_text):
+    try:
+        # WatsonX 응답 문자열 → 파싱
+        response_data = json.loads(response_text)
+        generated_json_str = response_data["results"][0]["generated_text"]
+        
+        # 모델의 출력은 JSON 문자열이므로 다시 파싱합니다.
+        result_data = json.loads(generated_json_str)
+
+        print("✅ 추천 레시피\n" + "="*20)
+        for recipe in result_data.get("recommended_recipes", []):
+            print(f"🍽️  **{recipe.get('title', '제목 없음')}** (ID: {recipe.get('id', 'N/A')})")
+            print(f"    - 인분: {recipe.get('serving', '정보 없음')}")
+            print(f"    - 난이도: {recipe.get('difficulty', '정보 없음')}")
+            print(f"    - 조리 시간: {recipe.get('cooking_time', '정보 없음')}")
+            print(f"    - 재료: {recipe.get('ingredients', '정보 없음')}")
+            print(f"    - 조리 순서: {recipe.get('steps', '정보 없음')}")
+            print(f"    - URL: {recipe.get('url', '정보 없음')}")
+            print("-" * 20)
+
+        if "recommendation_reason" in result_data:
+            print("\n✅ 추천 이유\n" + "="*20)
+            print(result_data["recommendation_reason"])
+
+        if "dietary_tips" in result_data:
+            print("\n✅ 식단 팁\n" + "="*20)
+            print(result_data["dietary_tips"])
+
+    except json.JSONDecodeError as e:
+        print(f"❌ JSON 파싱 실패: {e}")
+        print("원본 응답:")
+        print(response_text)
+    except Exception as e:
+        print(f"❌ 응답 처리 중 오류 발생: {e}")
