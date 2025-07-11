@@ -1,0 +1,24 @@
+# HTML 파싱
+beautifulsoup4
+
+# 웹 자동화
+selenium
+webdriver-manager
+
+# FastAPI
+fastapi
+uvicorn[standard]
+python-multipart
+
+# 기타 필수 패키지
+pymysql
+SQLAlchemy>=2.0
+
+# Google API 관련
+google-api-python-client
+google-auth
+google-auth-httplib2
+google-auth-oauthlib
+
+# 인증 토큰 발급
+PyJWT>=2.8.0

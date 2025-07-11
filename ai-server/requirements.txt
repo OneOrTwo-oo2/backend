@@ -1,0 +1,31 @@
+# LangChain 및 임베딩
+langchain
+langchain-community
+langchain-huggingface
+
+# 벡터스토어
+# faiss-cpu
+faiss-gpu  # ⚠️ GPU 환경에서만 사용하세요. faiss-cpu와 중복 설치 금지
+
+# HuggingFace
+transformers
+sentence-transformers
+
+# FastAPI
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Numpy 버전 제한
+numpy<2.0
+
+# PyTorch (CUDA 환경 별도 설치 권장. 아래는 참고용)
+# 설치는 pip 또는 공식 PyTorch 가이드 참고: https://pytorch.org/get-started/locally/
+
+# 기타 필수 패키지
+
+
+# 추가 설치 패키지
+ultralytics
+open_clip_torch
+
