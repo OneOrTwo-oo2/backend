@@ -1,32 +1,31 @@
-# Python 3.9 슬림 이미지 기반
 FROM python:3.9-slim
 
-# 환경 변수 설정 (시스템 상 비대화형 설치 허용)
 ENV DEBIAN_FRONTEND=noninteractive
-
-# 작업 디렉토리 설정
 WORKDIR /app
 
-# 필수 시스템 패키지 설치
-# - build-essential: C/C++ 컴파일 도구
-# - libgl1: OpenCV 및 ultralytics 실행을 위한 GL 라이브러리
-# - curl, git: huggingface 및 기타 의존 패키지용
+# 1. 시스템 패키지 설치
 RUN apt-get update && apt-get install -y \
-    build-essential \
-    libgl1-mesa-glx \
-    curl \
-    git \
+    build-essential libgl1-mesa-glx libglib2.0-0 curl git \
     && rm -rf /var/lib/apt/lists/*
 
-# requirements.txt 복사 및 설치
+# 최신 pip 설치
+RUN pip install --upgrade pip
+
+# 2. typing-extensions 문제 우회 (PyTorch 2.7.1 요구 충족)
+RUN pip install typing-extensions==4.12.0
+
+# 3. PyTorch 설치 (CUDA 11.8)
+RUN pip install torch==2.7.1 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# 4. 나머지 의존성 설치
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# 전체 프로젝트 복사
-COPY . .
+# 5. 앱 복사
+COPY app /app
 
-# 포트 열기 (FastAPI 기본)
+# 6. 캐시 제거
+RUN rm -rf /root/.cache /tmp/*
+
 EXPOSE 8000
-
-# FastAPI 실행
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
