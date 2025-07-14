@@ -2,30 +2,48 @@ from fastapi import APIRouter
 import requests
 from bs4 import BeautifulSoup
 
+
+from pydantic import BaseModel
+from typing import List, Optional
+
+class Step(BaseModel):
+    desc: str
+    img: Optional[str] = ""
+
+class RecipeSummary(BaseModel):
+    text: str
+    serving: Optional[str] = ""
+    time: Optional[str] = ""
+    difficulty: Optional[str] = ""
+
+class RecipeDetailOut(BaseModel):
+    summary: RecipeSummary
+    ingredients: List[str]
+    steps: List[Step]
+    link: str
+
+
 router = APIRouter()
 
-@router.get("/recipe-detail")
+@router.get("/recipe-detail", response_model=RecipeDetailOut)
 def get_recipe_detail(link: str):
     try:
         res = requests.get(link)
         soup = BeautifulSoup(res.content, "html.parser")
 
-        # ✅ 제목
-        title_tag = soup.select_one("meta[property='og:title']")
-        title = title_tag["content"] if title_tag else "제목 없음"
+        summary_text = soup.select_one("div.view2_summary_in").get_text(strip=True) \
+         if soup.select_one("div.view2_summary_in") else "요약 없음"
 
-        # ✅ 메인 썸네일 이미지
-        og_img_tag = soup.select_one("meta[property='og:image']")
-        image = og_img_tag["content"] if og_img_tag else ""
+        serving = soup.select_one("span.view2_summary_info1")
+        time = soup.select_one("span.view2_summary_info2")
+        difficulty = soup.select_one("span.view2_summary_info3")
 
-        if "icon_vod.png" in image:
-            print(f"⏩ [SKIP] 동영상 썸네일: {image}")
-            return {"error": "동영상 썸네일 제외됨", "link": link}
-
-        # ✅ 요약
-        summary_tag = soup.select_one("div.view2_summary")
-        summary = summary_tag.get_text(strip=True) if summary_tag else "요약 없음"
-
+        summary = {
+            "text": summary_text,
+            "serving": serving.get_text(strip=True) if serving else "",
+            "time": time.get_text(strip=True) if time else "",
+            "difficulty": difficulty.get_text(strip=True) if difficulty else ""
+        }
         # ✅ 재료
         ingredients = []
         ingre_elements = soup.select("div#divConfirmedMaterialArea ul li")
@@ -40,18 +58,12 @@ def get_recipe_detail(link: str):
         steps = []
         step_elements = soup.select("div.view_step > div.view_step_cont")
         for step in step_elements:
-            desc = step.select_one("div.media-body")
-            desc_text = desc.get_text(strip=True) if desc else ""
+            desc = step.select_one("div.media-body").get_text(strip=True) if step.select_one("div.media-body") else ""
             img_tag = step.select_one("img")
-            img_src = img_tag["src"] if img_tag else ""
-            steps.append({
-                "desc": desc_text,
-                "img": img_src
-            })
+            img = img_tag["src"] if img_tag else ""
+            steps.append({"desc": desc, "img": img})
 
         return {
-            "title": title,
-            "image": image,
             "summary": summary,
             "ingredients": ingredients,
             "steps": steps,
@@ -60,12 +72,6 @@ def get_recipe_detail(link: str):
 
     except Exception as e:
         print("❌ 상세 페이지 파싱 에러:", e)
-        return {
-            "error": "파싱 실패",
-            "title": "",
-            "image": "",
-            "summary": "",
-            "ingredients": [],
-            "steps": [],
-            "link": link
-        }
+        return {"error": "파싱 실패", "summary": "", "steps": []}
+
+
