@@ -33,3 +33,13 @@ def crawl_recipe_detail_bulk(recipes: List[dict]) -> List[dict]:
             continue
 
     return results
+
+def crawl_recipe_thumbnail(url: str) -> str:
+    try:
+        response = requests.get(url, timeout=5)
+        soup = BeautifulSoup(response.content, "html.parser")
+        img_tag = soup.select_one(".centeredcrop img") or soup.select_one(".view2_pic img")
+        return img_tag["src"] if img_tag else ""
+    except Exception as e:
+        print(f"❌ 썸네일 크롤링 실패: {e}")
+        return ""
