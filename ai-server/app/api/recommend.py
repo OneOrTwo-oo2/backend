@@ -6,6 +6,10 @@ import config
 import time
 from utils.watsonx import ask_watsonx, parse_watsonx_json
 from typing import Optional
+import requests
+from bs4 import BeautifulSoup
+from utils.watsonx import ask_watsonx, parse_watsonx_json
+from urllib.parse import urlencode
 
 router = APIRouter()
 
@@ -16,6 +20,44 @@ class RecipeRequest(BaseModel):
     allergies: Optional[str] = None
     diet_preference: Optional[str] = None
 
+
+def fetch_thumbnail_by_title(title: str) -> dict:
+    try:
+        base_url = "https://www.10000recipe.com/recipe/list.html"
+        params = {"q": title}
+        url = f"{base_url}?{urlencode(params)}"
+
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/114.0.0.0 Safari/537.36"
+            )
+        }
+
+        response = requests.get(url, headers=headers, timeout=5)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # ✅ 첫 번째 카드 기준으로 파싱
+        card = soup.select_one("ul.common_sp_list_ul > li.common_sp_list_li")
+        if not card:
+            print(f"❌ [{title}]에 대한 레시피 카드 없음")
+            return {"image": "", "link": ""}
+
+        img_tag = card.select_one(".common_sp_thumb img")
+        link_tag = card.select_one("a.common_sp_link")
+
+        img_url = img_tag["src"] if img_tag else ""
+        recipe_url = "https://www.10000recipe.com" + link_tag["href"] if link_tag else ""
+
+        return {"image": img_url, "link": recipe_url}
+
+    except Exception as e:
+        print(f"❌ [{title}] 썸네일 크롤링 실패: {e}")
+        return {"image": "", "link": ""}
+
+    
 # ✅ 기존 요약 + 유튜브
 @router.post("/recommend")
 async def recommend_recipe(req: RecipeRequest):
@@ -27,6 +69,8 @@ async def recommend_recipe(req: RecipeRequest):
     disease = req.disease or ""
     allergies = req.allergies or ""
     diet_preference = req.diet_preference or ""
+
+    
 
     print(f"🔍 Ingredients received: {ingredients}")
     print(f"⚕️ 질환 정보: {disease}")
@@ -74,16 +118,31 @@ async def recommend_recipe(req: RecipeRequest):
 
     print(f"🔍 Prompt built: {prompt[:1000]}")  # Print first 200 characters of prompt for debugging
 
+    
     # Ask Watsonx
     ai_response = ask_watsonx(prompt)
+    parsed = parse_watsonx_json(ai_response)
     print(f"🧠 Watsonx 응답 수신 완료")
-    print(f"🔍 Watsonx response: {ai_response}\n") 
+    print(f"🔍 Watsonx response: {ai_response}\n")
+
     
     # YouTube links
     # youtube_links = search_youtube_videos(ingredients)  # 재료 대신 요리 제목도 가능
     # print(f"🔍 YouTube links: {youtube_links}")
     
+    for recipe in parsed["recommended_recipes"]:
+        title = recipe.get("제목", "")
+        if title:
+            thumbnail_info = fetch_thumbnail_by_title(title)
+            recipe["image"] = thumbnail_info["image"]
+            recipe["link"] = thumbnail_info["link"]
+            print(f"📸 {title} 썸네일: {thumbnail_info['image']}")
+        else:
+            recipe["image"] = ""
+            recipe["link"] = ""
+            
     return {
-        "result": parse_watsonx_json(ai_response)
-        #"youtube": youtube_links
+        "result": parsed
+        
     }
+
