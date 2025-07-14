@@ -12,8 +12,7 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
 WATSONX_URL = os.getenv("WATSONX_URL")
 
-# ✅ access token 전역 저장
-ACCESS_TOKEN = None
+
 
 # vector_db 사전 저장
 vector_db_disease = None

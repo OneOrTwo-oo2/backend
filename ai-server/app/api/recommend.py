@@ -39,19 +39,22 @@ def fetch_thumbnail_by_title(title: str) -> dict:
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # ✅ 첫 번째 카드 기준으로 파싱
-        card = soup.select_one("ul.common_sp_list_ul > li.common_sp_list_li")
-        if not card:
-            print(f"❌ [{title}]에 대한 레시피 카드 없음")
-            return {"image": "", "link": ""}
+        # 여러 개 카드 중에서 icon_vod가 아닌 첫 번째 카드 사용
+        cards = soup.select("ul.common_sp_list_ul > li.common_sp_list_li")
+        for card in cards:
+            img_tag = card.select_one(".common_sp_thumb img")
+            link_tag = card.select_one("a.common_sp_link")
 
-        img_tag = card.select_one(".common_sp_thumb img")
-        link_tag = card.select_one("a.common_sp_link")
+            img_url = img_tag["src"] if img_tag else ""
+            recipe_url = "https://www.10000recipe.com" + link_tag["href"] if link_tag else ""
 
-        img_url = img_tag["src"] if img_tag else ""
-        recipe_url = "https://www.10000recipe.com" + link_tag["href"] if link_tag else ""
+            if "icon_vod.png" not in img_url:
+                return {"image": img_url, "link": recipe_url}
+            else:
+                print(f"⏩ [{title}] 동영상 썸네일 건너뜀: {img_url}")
 
-        return {"image": img_url, "link": recipe_url}
+        # 일반 썸네일 없으면 빈 값 리턴
+        return {"image": "", "link": ""}
 
     except Exception as e:
         print(f"❌ [{title}] 썸네일 크롤링 실패: {e}")
@@ -140,7 +143,7 @@ async def recommend_recipe(req: RecipeRequest):
         else:
             recipe["image"] = ""
             recipe["link"] = ""
-            
+
     return {
         "result": parsed
         
