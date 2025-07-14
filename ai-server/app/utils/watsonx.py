@@ -2,9 +2,16 @@ import config
 import requests
 import re
 import json
+import time
+
+# 전역 변수로 토큰과 만료 시간 관리
+_access_token = None
+_expires_at = 0  # 유닉스 타임스탬프
 
 # ✅ Watsonx 토큰 발급
 def get_ibm_access_token(api_key: str) -> str:
+    global _access_token, _expires_at
+
     response = requests.post(
         "https://iam.cloud.ibm.com/identity/token",
         headers={
@@ -18,7 +25,21 @@ def get_ibm_access_token(api_key: str) -> str:
         verify=False
     )
     response.raise_for_status()
-    return response.json()["access_token"]
+    token_data = response.json()
+
+    _access_token = token_data["access_token"]
+    # expires_in은 초 단위 → 현재 시간 + 만료 시간
+    _expires_at = time.time() + token_data.get("expires_in", 3600) - 60  # 60초 여유
+
+    return _access_token
+
+def get_valid_access_token() -> str:
+    global _access_token, _expires_at
+
+    if not _access_token or time.time() >= _expires_at:
+        print("🔄 Watsonx 토큰 갱신 중...")
+        return get_ibm_access_token(config.WATSON_API_KEY)
+    return _access_token
 
 
 def ask_watsonx(prompt: str) -> str:
@@ -39,6 +60,7 @@ def ask_watsonx(prompt: str) -> str:
     if response.status_code != 200:
         return f"❌ watsonx 요청 실패: {response.status_code} {response.text}"
     return response.text
+
 
 
 def parse_watsonx_json(response_text: str) -> dict:
