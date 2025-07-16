@@ -22,7 +22,7 @@ def get_ibm_access_token(api_key: str) -> str:
             "grant_type": "urn:ibm:params:oauth:grant-type:apikey",
             "apikey": api_key
         },
-        verify=False
+        verify=False  # 운영시에는 True or 생략 SSL 인증서 경고 무시하는격
     )
     response.raise_for_status()
     token_data = response.json()
@@ -45,7 +45,7 @@ def get_valid_access_token() -> str:
 def ask_watsonx(prompt: str) -> str:
     url = config.WATSONX_URL
     headers = {
-        "Authorization": f"Bearer {config.ACCESS_TOKEN}",
+        "Authorization": f"Bearer {get_valid_access_token()}",
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
