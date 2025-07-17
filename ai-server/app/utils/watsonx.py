@@ -42,25 +42,91 @@ def get_valid_access_token() -> str:
     return _access_token
 
 
+# def ask_watsonx(prompt: str) -> str:
+#     url = config.WATSONX_URL
+#     headers = {
+#         "Authorization": f"Bearer {get_valid_access_token()}",
+#         "Content-Type": "application/json",
+#         "Accept": "application/json"
+#     }
+#     payload = {
+#         "parameters": {
+#             "prompt_variables": {
+#                 "context": prompt
+#             }
+#         }
+#     }
+#     response = requests.post(url, headers=headers, json=payload)
+#     if response.status_code != 200:
+#         return f"❌ watsonx 요청 실패: {response.status_code} {response.text}"
+#     return response.text
+
 def ask_watsonx(prompt: str) -> str:
     url = config.WATSONX_URL
+
     headers = {
         "Authorization": f"Bearer {get_valid_access_token()}",
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
-    payload = {
+    body = {
+        "input":prompt,
         "parameters": {
-            "prompt_variables": {
-                "context": prompt
-            }
-        }
-    }
-    response = requests.post(url, headers=headers, json=payload)
+            "decoding_method": "greedy",
+            "max_new_tokens": 8096,
+            "min_new_tokens": 0,
+            "repetition_penalty": 1
+        },
+        "model_id": "meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
+	    "project_id": "a825f7de-98f1-4f2f-921b-79eaf71df453",
+        "moderations": {
+		"hap": {
+			"input": {
+				"enabled": True,
+				"threshold": 0.5,
+				"mask": {
+					"remove_entity_value": True
+				}
+			},
+			"output": {
+				"enabled": True,
+				"threshold": 0.5,
+				"mask": {
+					"remove_entity_value": True
+				}
+			}
+		},
+		"pii": {
+			"input": {
+				"enabled": True,
+				"threshold": 0.5,
+				"mask": {
+					"remove_entity_value": True
+				}
+			},
+			"output": {
+				"enabled": True,
+				"threshold": 0.5,
+				"mask": {
+					"remove_entity_value": True
+				}
+			}
+		},
+		"granite_guardian": {
+			"input": {
+				"threshold": 1
+			}
+		}
+	}
+}
+    
+    response = requests.post(
+        url, 
+        headers=headers, 
+        json=body)
     if response.status_code != 200:
         return f"❌ watsonx 요청 실패: {response.status_code} {response.text}"
     return response.text
-
 
 
 def parse_watsonx_json(response_text: str) -> dict:

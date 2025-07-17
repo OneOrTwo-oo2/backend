@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from utils.youtube import search_youtube_videos
-from utils.prompt import build_prompt, format_recipe, search_top_k, print_watsonx_response
+from utils.prompt2 import build_prompt, format_recipe, search_top_k, print_watsonx_response
 import config
 import time
 from utils.watsonx import ask_watsonx, parse_watsonx_json
