@@ -134,10 +134,17 @@ async def recommend_recipe(req: RecipeRequest):
     print(f"🧠 Watsonx 응답 수신 완료")
     print(f"🔍 Watsonx response: {ai_response}\n")
 
+    # cursor 수정 - Watson 응답 에러 처리 추가
+    if not parsed or "recommended_recipes" not in parsed:
+        print(f"❌ Watson 응답 파싱 실패 또는 예상 형식이 아님: {parsed}")
+        return {
+            "recommended_recipes": [],
+            "dietary_tips": "죄송합니다. AI 추천을 생성하는 중 오류가 발생했습니다."
+        }
     
     # YouTube links
     # youtube_links = search_youtube_videos(ingredients)  # 재료 대신 요리 제목도 가능
-    # print(f"🔍 YouTube links: {youtube_links}")
+    # print(f🔍 YouTube links: {youtube_links}")
     
     for recipe in parsed["recommended_recipes"]:
         title = recipe.get("제목", "")
