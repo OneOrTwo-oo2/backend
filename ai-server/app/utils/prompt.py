@@ -6,14 +6,14 @@ def search_top_k(
     vectordb,
     model,
     top_k=5,
-    exclude_ingredients_str=None,
-    difficulty_levels_str=None,
-    types_str=None
+    exclude_ingredients=None,
+    level=None,
+    kind=None
 ):
-    # 문자열 → 리스트 변환
-    exclude_ingredients = [i.strip() for i in exclude_ingredients_str.split(",")] if exclude_ingredients_str else []
-    difficulty_levels = [d.strip() for d in difficulty_levels_str.split(",")] if difficulty_levels_str else []
-    types = [t.strip() for t in types_str.split(",")] if types_str else []
+    # # 문자열 → 리스트 변환
+    #exclude_ingredients = [i.strip() for i in exclude_ingredients.split(",")] if exclude_ingredients else []
+    # difficulty_levels = [d.strip() for d in difficulty_levels_str.split(",")] if difficulty_levels_str else []
+    # types = [t.strip() for t in types_str.split(",")] if types_str else []
 
     # ✅ 벡터 검색 (여유 있게 top_k * 10개 가져와서 필터링)
     query_vector = model.encode([query]).astype("float32")
@@ -35,11 +35,11 @@ def search_top_k(
             continue
 
         # 3. 난이도 필터링 (정확히 일치)
-        if difficulty_levels and 난이도 not in difficulty_levels:
+        if level and 난이도 not in level:
             continue
 
         # 4. 종류 필터링 (정확히 일치)
-        if types and 종류 not in types:
+        if kind and 종류 not in kind:
             continue
 
         # ✅ 결과 저장
@@ -68,18 +68,18 @@ def build_prompt(
     ingredients,
     filtered_recipes,
     context=None,
-    disease=None,
+    diseases=None,
     allergies=None,
-    diet_preference=None
+    preference=None
 ) -> str:
     # 사용자 입력 정보 요약
     user_info = f"입력한 재료: {ingredients}"
     if allergies and allergies != "해당없음":
         user_info += f"\n알러지 정보: {allergies}"
-    if diet_preference and diet_preference != "해당없음":
-        user_info += f"\n식단 선호: {diet_preference}"
-    if disease and disease != "해당없음":
-        user_info += f"\n질환 정보: {disease}"
+    if preference and preference != "해당없음":
+        user_info += f"\n식단 선호: {preference}"
+    if diseases and diseases != "해당없음":
+        user_info += f"\n질환 정보: {diseases}"
 
     # 프롬프트 조립
     prompt = f"""<role>
@@ -96,7 +96,7 @@ def build_prompt(
 """
 
     # context가 있을 경우
-    if disease and context:
+    if diseases and context:
         prompt += f"""
 <context>
 {context}

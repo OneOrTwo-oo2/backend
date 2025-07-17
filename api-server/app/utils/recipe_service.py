@@ -64,7 +64,7 @@ def fetch_recipes_from_10000recipe(
             # ✅ 정상적인 카드 처리
             title = card.select_one(".common_sp_caption_tit").get_text(strip=True)
             link = "https://www.10000recipe.com" + card.select_one("a.common_sp_link")["href"]
-            print(f"✅ [PASS] 제목: {title}, 이미지: {img_src}")
+            #print(f"✅ [PASS] 제목: {title}, 이미지: {img_src}")
             recipe_id = get_or_create_recipe_id(db, title, img_src, "", link)
 
             return {

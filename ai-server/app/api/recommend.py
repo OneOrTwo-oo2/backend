@@ -5,7 +5,7 @@ from utils.prompt import build_prompt, format_recipe, search_top_k, print_watson
 import config
 import time
 from utils.watsonx import ask_watsonx, parse_watsonx_json
-from typing import Optional
+from typing import Optional, List
 import requests
 from bs4 import BeautifulSoup
 from utils.watsonx import ask_watsonx, parse_watsonx_json
@@ -15,10 +15,13 @@ router = APIRouter()
 
 # ✅ POST 요청 바디
 class RecipeRequest(BaseModel):
-    ingredients: str
-    disease: Optional[str] = None
-    allergies: Optional[str] = None
-    diet_preference: Optional[str] = None
+    ingredients: List[str] #list[str] 
+    diseases: Optional[List[str]] = None
+    allergies: Optional[List[str]] = None
+    preference: Optional[str] = None
+    kind: Optional[str] = None  
+    level: Optional[str] = None  
+
 
 
 def fetch_thumbnail_by_title(title: str) -> dict:
@@ -68,17 +71,20 @@ async def recommend_recipe(req: RecipeRequest):
     vectordb_disease = config.vector_db_disease
     model = config.embedding_model
 
-    ingredients = req.ingredients
-    disease = req.disease or ""
-    allergies = req.allergies or ""
-    diet_preference = req.diet_preference or ""
-
+    ingredients = req.ingredients or []
+    diseases =  diseases = req.diseases if req.diseases else []
+    allergies = req.allergies or []
+    preference = req.preference or ""
+    kind = req.kind or ""
+    level = req.level or ""
     
 
     print(f"🔍 Ingredients received: {ingredients}")
-    print(f"⚕️ 질환 정보: {disease}")
+    print(f"⚕️ 질환 정보: {diseases}")
     print(f"🚫 알러지 정보: {allergies}")
-    print(f"🥗 식단 선호: {diet_preference}")
+    print(f"🥗 식단 선호: {preference}")
+    print(f"🥗 종류: {kind}")
+    print(f"🥗 난이도도: {level}")
 
     # ✅ 유사 레시피 검색 (쿼리용 문자열 재조합, Top 50)
     
@@ -89,9 +95,9 @@ async def recommend_recipe(req: RecipeRequest):
                            vectordb=vectordb_recipe,
                             model=model, 
                             top_k=top_k,
-                            exclude_ingredients_str=allergies,
-                            difficulty_levels_str=None,
-                            types_str=None
+                            exclude_ingredients=allergies,
+                            level=level,
+                            kind=kind
                             )
 
     filtered_recipes = "\n\n".join([format_recipe(doc, i+1) for i, (doc, _) in enumerate(results)])
@@ -100,9 +106,9 @@ async def recommend_recipe(req: RecipeRequest):
     context = ""
 
     # ✅ 관련 disease context 추출
-    if disease:
+    if diseases:
         # 질환이 있는 경우, 벡터 DB에서 문맥 검색
-        query = f"{disease}의 식사요법"     
+        query = f"{diseases}의 식사요법"     
         results = vectordb_disease.similarity_search_with_score(query, k=1)
         context = "\n\n".join([doc.page_content for doc, _ in results])
     else:
@@ -114,9 +120,9 @@ async def recommend_recipe(req: RecipeRequest):
     prompt = build_prompt(ingredients=ingredients, 
                         filtered_recipes = filtered_recipes, 
                         context=context, 
-                        disease=disease,
+                        diseases=diseases,
                         allergies=allergies,
-                        diet_preference=diet_preference
+                        preference=preference
                         )
 
     print(f"🔍 Prompt built: {prompt[:1000]}")  # Print first 200 characters of prompt for debugging
