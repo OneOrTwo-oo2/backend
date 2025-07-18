@@ -1,14 +1,13 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from utils.youtube import search_youtube_videos
-from utils.prompt2 import build_prompt, format_recipe, search_top_k, print_watsonx_response
+from utils.prompt import build_prompt, format_recipe, search_top_k, print_watsonx_response
 import config
 import time
 from utils.watsonx import ask_watsonx, parse_watsonx_json
 from typing import Optional, List
 import requests
 from bs4 import BeautifulSoup
-from utils.watsonx import ask_watsonx, parse_watsonx_json
 from urllib.parse import urlencode
 
 router = APIRouter()
@@ -72,7 +71,7 @@ async def recommend_recipe(req: RecipeRequest):
     model = config.embedding_model
 
     ingredients = req.ingredients or []
-    diseases =  diseases = req.diseases if req.diseases else []
+    diseases = req.diseases or []
     allergies = req.allergies or []
     preference = req.preference or ""
     kind = req.kind or ""
@@ -84,12 +83,10 @@ async def recommend_recipe(req: RecipeRequest):
     print(f"🚫 알러지 정보: {allergies}")
     print(f"🥗 식단 선호: {preference}")
     print(f"🥗 종류: {kind}")
-    print(f"🥗 난이도도: {level}")
+    print(f"🥗 난이도: {level}")
 
     # ✅ 유사 레시피 검색 (쿼리용 문자열 재조합, Top 50)
-    
     top_k = 15
-    
     start = time.time()
     results = search_top_k(query = ingredients,
                            vectordb=vectordb_recipe,
@@ -100,16 +97,28 @@ async def recommend_recipe(req: RecipeRequest):
                             kind=kind
                             )
 
-    filtered_recipes = "\n\n".join([format_recipe(doc, i+1) for i, (doc, _) in enumerate(results)])
+    # filtered_recipes를 딕셔너리 리스트로 생성
+    filtered_recipes = []
+    for i, (doc, _) in enumerate(results):
+        meta = doc.metadata
+        filtered_recipes.append({
+            "id": i+1,
+            "title": meta.get("제목", ""),
+            "ingredients": [ing.strip() for ing in meta.get("재료", "").split(",") if ing.strip()],
+            "tags": meta.get("tags", []),
+            "url": meta.get("URL", "")
+        })
     print(f"🔍 유사 레시피 {top_k}개 검색 완료 (소요: {time.time() - start:.2f}초)")
 
     context = ""
 
     # ✅ 관련 disease context 추출
     if diseases:
-        # 질환이 있는 경우, 벡터 DB에서 문맥 검색
-        query = f"{diseases}의 식사요법"     
-        results = vectordb_disease.similarity_search_with_score(query, k=1)
+        results = []
+        for disease in diseases:
+            query = f"{disease}의 식사요법"
+            result = vectordb_disease.similarity_search_with_score(query, k=1)
+            results.extend(result)
         context = "\n\n".join([doc.page_content for doc, _ in results])
     else:
         context = None
@@ -133,13 +142,16 @@ async def recommend_recipe(req: RecipeRequest):
     parsed = parse_watsonx_json(ai_response)
     print(f"🧠 Watsonx 응답 수신 완료")
     print(f"🔍 Watsonx response: {ai_response}\n")
+    print("파싱 결과:", parsed)
 
     # cursor 수정 - Watson 응답 에러 처리 추가
     if not parsed or "recommended_recipes" not in parsed:
         print(f"❌ Watson 응답 파싱 실패 또는 예상 형식이 아님: {parsed}")
         return {
-            "recommended_recipes": [],
-            "dietary_tips": "죄송합니다. AI 추천을 생성하는 중 오류가 발생했습니다."
+            "result": {
+                "recommended_recipes": [],
+                "dietary_tips": "죄송합니다. AI 추천을 생성하는 중 오류가 발생했습니다."
+            }
         }
     
     # YouTube links
@@ -147,7 +159,7 @@ async def recommend_recipe(req: RecipeRequest):
     # print(f🔍 YouTube links: {youtube_links}")
     
     for recipe in parsed["recommended_recipes"]:
-        title = recipe.get("제목", "")
+        title = recipe.get("제목", "")  # WatsonX 응답에서 "제목" 사용
         if title:
             thumbnail_info = fetch_thumbnail_by_title(title)
             recipe["image"] = thumbnail_info["image"]
