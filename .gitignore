@@ -207,3 +207,5 @@ pip-selfcheck.json
 *.pt
 *.pth
 *.csv
+
+k8s/

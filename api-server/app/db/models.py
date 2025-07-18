@@ -8,6 +8,8 @@ class User(Base):
     __tablename__ = "User"
     user_id = Column(Integer, primary_key=True)
     user_email = Column(String(100), nullable=False, unique=True)
+    password = Column(String(255), nullable=True)  # 자체 회원가입용 비밀번호 (Google 로그인은 null)
+    login_type = Column(String(20), default="google")  # "google" 또는 "email"
 
     allergies = relationship("UserAllergy", back_populates="user", cascade="all, delete")
     diseases = relationship("UserDisease", back_populates="user", cascade="all, delete")
