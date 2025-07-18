@@ -1,5 +1,9 @@
 from langchain.schema import Document
 import json
+# #from ibm_watsonx_ai.credentials import Credentials
+# #from ibm_watsonx_ai.foundation_models import ModelInference
+# from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
+# from ibm_watsonx_ai.foundation_models.utils.enums import ModelTypes, DecodingMethods
 
 def search_top_k(
     query,
@@ -16,10 +20,13 @@ def search_top_k(
     # types = [t.strip() for t in types_str.split(",")] if types_str else []
 
     # ✅ 벡터 검색 (여유 있게 top_k * 10개 가져와서 필터링)
+    query = ", ".join(query)
     query_vector = model.encode([query]).astype("float32")
     scores, indices = vectordb.index.search(query_vector, k=top_k * 10)
 
     results = []
+    seen_titles = set()  # 중복 제거를 위한 제목 추적
+    
     for i, idx in enumerate(indices[0]):
         doc_id = vectordb.index_to_docstore_id[idx]
         doc = vectordb.docstore.search(doc_id)
@@ -29,9 +36,15 @@ def search_top_k(
         재료 = meta.get("재료", "")
         난이도 = meta.get("난이도", "").strip()
         종류 = meta.get("종류", "").strip()
+        제목 = meta.get("제목", "").strip()
+
+        # 1. 중복 제목 체크
+        if 제목 in seen_titles:
+            continue
+        seen_titles.add(제목)
 
         # 2. exclude_ingredients: 재료 문자열 안에 하나라도 포함되면 제외
-        if any(exc in 재료 for exc in exclude_ingredients):
+        if exclude_ingredients and any(exc in 재료 for exc in exclude_ingredients):
             continue
 
         # 3. 난이도 필터링 (정확히 일치)
@@ -63,7 +76,6 @@ def format_recipe(doc: Document, index: int) -> str:
 - url: {meta.get('URL', '')}
 """
 
-
 def build_prompt(
     ingredients,
     filtered_recipes,
@@ -72,7 +84,7 @@ def build_prompt(
     allergies=None,
     preference=None
 ) -> str:
-    # 사용자 입력 정보 요약
+    # 1. 사용자 정보 조립
     user_info = f"입력한 재료: {ingredients}"
     if allergies and allergies != "해당없음":
         user_info += f"\n알러지 정보: {allergies}"
@@ -81,7 +93,20 @@ def build_prompt(
     if diseases and diseases != "해당없음":
         user_info += f"\n질환 정보: {diseases}"
 
-    # 프롬프트 조립
+    # 2. 후보 레시피 정제 (각 레시피를 구조적으로 나열)
+    recipe_section = ""
+    for r in filtered_recipes:
+        recipe_section += f"- ID: {r.get('id')}\n"
+        recipe_section += f"  제목: {r.get('title')}\n"
+        recipe_section += f"  주요 재료: {', '.join(r.get('ingredients', []))}\n"
+        if r.get("tags"):
+            recipe_section += f"  태그: {', '.join(r['tags'])}\n"
+        recipe_section += "\n"
+
+    # 3. context가 없더라도 빈 블록 유지
+    context_text = context.strip() if context else "N/A"
+
+    # 4. 프롬프트 전체 구성
     prompt = f"""<role>
 당신은 요리와 영양에 정통한 최고의 AI 셰프입니다.
 </role>
@@ -91,58 +116,51 @@ def build_prompt(
 </user_info>
 
 <candidate_recipes>
-{filtered_recipes}
+{recipe_section.strip()}
 </candidate_recipes>
-"""
 
-    # context가 있을 경우
-    if diseases and context:
-        prompt += f"""
 <context>
-{context}
+{context_text}
 </context>
-"""
 
-    prompt += """
 <instructions>
-1. 위 정보를 참고해 사용자에게 가장 적합한 레시피 3개를 추천해주세요.
-2. 입력한 재료와 유사하거나 포함된 레시피를 우선적으로 선택해주세요.
-3. 질환 정보가 있다면, `<context>` 문서를 참고해 추천 이유를 반드시 작성해주세요.
-4. 각 레시피를 추천하는 이유를 사용자 정보를 바탕으로 논리적으로 작성해주세요.
-5. 반드시 아래 JSON 형식을 따라 응답하세요. 설명 없이 JSON 객체만 반환해야 합니다.
+1. 위 정보를 참고하여 사용자에게 가장 적합한 레시피 3개를 JSON 형식으로 추천해주세요.
+2. 입력한 재료와 유사하거나 포함된 레시피를 우선적으로 고려하세요.
+3. 질환 정보가 있다면, <context> 정보를 반드시 활용하고 설명에 반영하세요.
+4. 각 추천에는 '이 레시피를 추천하는 이유'를 사용자 정보에 기반해 구체적으로 작성하세요.
+5. 아래 JSON 형식만 그대로 반환하세요. 텍스트 설명 없이 JSON만 출력해야 합니다.
 </instructions>
 
 <json_output_example>
-{
+{{
   "recommended_recipes": [
-    {
+    {{
       "id": 1,
       "제목": "닭가슴살 샐러드",
       "url": "http://example.com/recipe/1",
-      "recommendation_reason": "이 레시피는 사용자가 입력한 재료인 닭가슴살과 양상추를 바탕으로 구성되어 있어 재료 활용도가 높습니다. 특히 고혈압을 앓고 있는 사용자의 건강 상태를 고려하여, 전체적인 나트륨 함량을 낮게 유지하고 가공식품이나 고염도 양념을 배제함으로써 혈압 상승 위험을 줄였습니다.
-또한, 단백질이 풍부한 닭가슴살은 고혈압 환자에게 권장되는 저지방 육류이며, 양상추는 수분과 식이섬유가 풍부하여 혈관 건강에 도움을 줍니다. 이와 함께 사용자의 식단 선호인 ‘채식에 가까운 구성’을 고려하여, 동물성 식재료는 최소화하고 식물성 재료를 중심으로 조리법을 구성했습니다. 알러지 정보 또한 반영되어, 달걀은 전혀 사용하지 않아 안전한 섭취가 가능합니다."
-    },
-    {
+      "recommendation_reason": "이 레시피는 사용자의 재료, 선호도와 질환 상태를 반영하여 저염식, 고단백 식단으로 구성되어 있습니다..."
+    }},
+    {{
       "id": 2,
       "제목": "...",
-      "url": "..."
-  "recommendation_reason": "이 레시피는 사용자가 입력한 두부와 시금치를 주재료로 하여 구성되어 있으며, 만성 신장병 환자의 식이 제한 사항을 철저히 고려하였습니다. 두부는 단백질 공급원 중 비교적 인이 적은 편이며, 시금치는 조리 시 물에 데쳐 옥살산을 줄임으로써 칼륨 섭취도 조절할 수 있습니다.
-특히 알러지 정보에 따라 유제품과 견과류는 일절 포함되지 않았고, 가공 조미료 사용을 최소화하여 신장 기능에 무리를 주지 않도록 설계되었습니다. 전체적으로 저염식이며, 인과 칼륨 함량을 의도적으로 낮춘 식단입니다",
-  },
-  "dietary_tips": "고혈압 환자는 음식을 선택할 때 무엇보다 나트륨 섭취를 줄이는 것이 중요합니다. 이를 위해 간장, 소금, 액젓 등의 사용을 줄이고, 천연 재료의 풍미를 살린 조리법을 택하는 것이 좋습니다.
-또한, 식이섬유와 칼륨이 풍부한 채소류를 충분히 섭취하면 나트륨 배출을 도와 혈압 조절에 긍정적인 영향을 줄 수 있습니다. 이 레시피는 생채소를 충분히 활용하며, 가열 시에도 기름이나 소금을 과도하게 사용하지 않도록 구성되어 있어 고혈압 관리에 도움이 됩니다.
-물을 충분히 마시고, 정제 탄수화물과 가공식품은 줄이는 습관을 병행하면 보다 효과적인 식이 조절이 가능합니다."
-]
-}
+      "url": "...",
+      "recommendation_reason": "..."
+    }},
+    {{
+      "id": 3,
+      "제목": "...",
+      "url": "...",
+      "recommendation_reason": "..."
+    }}
+  ],
+  "dietary_tips": "질환 관리에 도움이 되는 전반적인 식단 조언을 포함해주세요. 예: 고혈압 환자는 나트륨 섭취를 줄이고, 채소 섭취를 늘리는 것이 중요합니다."
+}}
 </json_output_example>
 
-
 <response>
-이제 위 형식을 따르는 JSON 응답을 생성해주세요.
-</response>
 """
-    return prompt
 
+    return prompt
 
 
 def print_watsonx_response(response_text):
