@@ -17,6 +17,8 @@ jobs:
       ai_changed: ${{ steps.ai.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Check for changes in api-server
         id: api
