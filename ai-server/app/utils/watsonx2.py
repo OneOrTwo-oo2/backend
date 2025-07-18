@@ -61,9 +61,9 @@ def get_valid_access_token() -> str:
 #         return f"❌ watsonx 요청 실패: {response.status_code} {response.text}"
 #     return response.text
 
-def ask_watsonx(prompt: str) -> str:
-    #url = config.WATSONX_URL
-    url = "https://us-south.ml.cloud.ibm.com/ml/v1/text/generation?version=2023-05-29"
+def ask_watsonx(prompt: str) -> dict:
+    url = config.WATSONX_URL
+
     headers = {
         "Authorization": f"Bearer {get_valid_access_token()}",
         "Content-Type": "application/json",
@@ -72,57 +72,52 @@ def ask_watsonx(prompt: str) -> str:
     body = {
         "input":prompt,
         "parameters": {
-            "decoding_method": "sample",
+            "decoding_method": "greedy",
             "max_new_tokens": 8096,
             "min_new_tokens": 0,
-            "temperature": 0.2,
-            "top_k": 30,
-            "top_p": 1,
-            "repetition_penalty": 1.1
+            "repetition_penalty": 1
         },
-        #"model_id": "meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
-        "model_id":"meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
-        #"project_id": "a825f7de-98f1-4f2f-921b-79eaf71df453",
+        "model_id": "meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
 	    "project_id": "a825f7de-98f1-4f2f-921b-79eaf71df453",
-    #     "moderations": {
-	# 	"hap": {
-	# 		"input": {
-	# 			"enabled": True,
-	# 			"threshold": 0.5,
-	# 			"mask": {
-	# 				"remove_entity_value": True
-	# 			}
-	# 		},
-	# 		"output": {
-	# 			"enabled": True,
-	# 			"threshold": 0.5,
-	# 			"mask": {
-	# 				"remove_entity_value": True
-	# 			}
-	# 		}
-	# 	},
-	# 	"pii": {
-	# 		"input": {
-	# 			"enabled": True,
-	# 			"threshold": 0.5,
-	# 			"mask": {
-	# 				"remove_entity_value": True
-	# 			}
-	# 		},
-	# 		"output": {
-	# 			"enabled": True,
-	# 			"threshold": 0.5,
-	# 			"mask": {
-	# 				"remove_entity_value": True
-	# 			}
-	# 		}
-	# 	},
-	# 	"granite_guardian": {
-	# 		"input": {
-	# 			"threshold": 1
-	# 		}
-	# 	}
-	# }
+        "moderations": {
+		"hap": {
+			"input": {
+				"enabled": True,
+				"threshold": 0.5,
+				"mask": {
+					"remove_entity_value": True
+				}
+			},
+			"output": {
+				"enabled": True,
+				"threshold": 0.5,
+				"mask": {
+					"remove_entity_value": True
+				}
+			}
+		},
+		"pii": {
+			"input": {
+				"enabled": True,
+				"threshold": 0.5,
+				"mask": {
+					"remove_entity_value": True
+				}
+			},
+			"output": {
+				"enabled": True,
+				"threshold": 0.5,
+				"mask": {
+					"remove_entity_value": True
+				}
+			}
+		},
+		"granite_guardian": {
+			"input": {
+				"threshold": 1
+			}
+		}
+	}
 }
     
     response = requests.post(
