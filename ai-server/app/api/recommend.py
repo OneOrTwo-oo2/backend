@@ -70,13 +70,30 @@ async def recommend_recipe(req: RecipeRequest):
     vectordb_disease = config.vector_db_disease
     model = config.embedding_model
 
-    ingredients = req.ingredients or []
+    ingredients_raw = req.ingredients or []
     diseases = req.diseases or []
     allergies = req.allergies or []
     preference = req.preference or ""
     kind = req.kind or ""
     level = req.level or ""
-    
+
+    # 알러지에 "달걀" 또는 "계란"이 있으면 둘 다 제외, "새우" 또는 "대하"도 마찬가지
+    egg_aliases = {"달걀", "계란"}
+    shrimp_aliases = {"새우", "대하"}
+
+    # 알러지에 달걀/계란이 하나라도 있으면 ingredients에서 둘 다 제외
+    exclude_eggs = any(a in egg_aliases for a in allergies)
+    exclude_shrimps = any(a in shrimp_aliases for a in allergies)
+
+    ingredients = []
+    for item in ingredients_raw:
+        if exclude_eggs and item in egg_aliases:
+            continue
+        if exclude_shrimps and item in shrimp_aliases:
+            continue
+        if item in allergies:
+            continue
+        ingredients.append(item)
 
     print(f"🔍 Ingredients received: {ingredients}")
     print(f"⚕️ 질환 정보: {diseases}")
@@ -86,7 +103,7 @@ async def recommend_recipe(req: RecipeRequest):
     print(f"🥗 난이도: {level}")
 
     # ✅ 유사 레시피 검색 (쿼리용 문자열 재조합, Top 50)
-    top_k = 15
+    top_k = 100
     start = time.time()
     results = search_top_k(query = ingredients,
                            vectordb=vectordb_recipe,
@@ -103,13 +120,12 @@ async def recommend_recipe(req: RecipeRequest):
         meta = doc.metadata
         filtered_recipes.append({
             "id": i+1,
-            "title": meta.get("제목", ""),
-            "ingredients": [ing.strip() for ing in meta.get("재료", "").split(",") if ing.strip()],
-            "tags": meta.get("tags", []),
-            "url": meta.get("URL", "")
+            "제목": meta.get("제목", ""),
+            "재료": [ing.strip() for ing in meta.get("재료", "").split(",") if ing.strip()],
+            "URL": meta.get("URL", "")
         })
     print(f"🔍 유사 레시피 {top_k}개 검색 완료 (소요: {time.time() - start:.2f}초)")
-
+    print(f"🔍 유사 레시피: {filtered_recipes[:20]}")
     context = ""
 
     # ✅ 관련 disease context 추출

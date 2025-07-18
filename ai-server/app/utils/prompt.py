@@ -97,11 +97,13 @@ def build_prompt(
     recipe_section = ""
     for r in filtered_recipes:
         recipe_section += f"- ID: {r.get('id')}\n"
-        recipe_section += f"  제목: {r.get('title')}\n"
-        recipe_section += f"  주요 재료: {', '.join(r.get('ingredients', []))}\n"
-        if r.get("tags"):
-            recipe_section += f"  태그: {', '.join(r['tags'])}\n"
-        recipe_section += "\n"
+        recipe_section += f"  제목: {r.get('제목')}\n"
+        recipe_section += f"  주요 재료: {', '.join(r.get('재료', []))}\n"
+        recipe_section += f"  URL: {r.get('URL')}\n"
+        recipe_section += "\n"  
+        # if r.get("URL"):
+        #     recipe_section += f"  URL: {r['URL']}\n"
+        # recipe_section += "\n"
 
     # 3. context가 없더라도 빈 블록 유지
     context_text = context.strip() if context else "N/A"
@@ -124,11 +126,13 @@ def build_prompt(
 </context>
 
 <instructions>
-1. 위 정보를 참고하여 사용자에게 가장 적합한 레시피 3개를 JSON 형식으로 추천해주세요.
+1. 위 정보를 조건을 모두 반영하여 가장 적합한 레시피 3개를 JSON 형식으로 추천해주세요.
 2. 입력한 재료와 유사하거나 포함된 레시피를 우선적으로 고려하세요.
 3. 질환 정보가 있다면, <context> 정보를 반드시 활용하고 설명에 반영하세요.
-4. 각 추천에는 '이 레시피를 추천하는 이유'를 사용자 정보에 기반해 구체적으로 작성하세요.
-5. 아래 JSON 형식만 그대로 반환하세요. 텍스트 설명 없이 JSON만 출력해야 합니다.
+4. 각 레시피의 recommendation_reason는 최소 3문장 이상 작성하고, 사용자의 보유 재료, 질환(예: 당뇨병), 알러지, 식이 성향(예: 저탄수화물 식단)을 모두 상세하게 반영하여 구체적이고 논리적으로 설명하세요.
+5. 각 레시피의 dietary_tips은 질환 관리나 영양 관리에 도움이 되는 전반적인 식단 조언을 포함해주세요. 예: 고혈압 환자는 나트륨 섭취를 줄이고, 채소 섭취를 늘리는 것이 중요합니다.
+6. 각 설명은 요리의 재료 구성, 조리 방법, 질환과 영양학적 적합성, 식이 제한 요소 반영 여부까지 포괄해야 합니다.
+7. 아래 예시처럼 아무런 설명, 코드, 주석, 영어 텍스트 없이 JSON만 반환하세요.
 </instructions>
 
 <json_output_example>
@@ -139,21 +143,23 @@ def build_prompt(
       "제목": "닭가슴살 샐러드",
       "url": "http://example.com/recipe/1",
       "recommendation_reason": "이 레시피는 사용자의 재료, 선호도와 질환 상태를 반영하여 저염식, 고단백 식단으로 구성되어 있습니다..."
+      "dietary_tips": "질환 관리에 도움이 되는 전반적인 식단 조언을 포함해주세요. 예: 고혈압 환자는 나트륨 섭취를 줄이고, 채소 섭취를 늘리는 것이 중요합니다."
     }},
     {{
       "id": 2,
       "제목": "...",
       "url": "...",
       "recommendation_reason": "..."
+      "dietary_tips": "..."
     }},
     {{
       "id": 3,
       "제목": "...",
       "url": "...",
       "recommendation_reason": "..."
+      "dietary_tips": "..."
     }}
-  ],
-  "dietary_tips": "질환 관리에 도움이 되는 전반적인 식단 조언을 포함해주세요. 예: 고혈압 환자는 나트륨 섭취를 줄이고, 채소 섭취를 늘리는 것이 중요합니다."
+  ]
 }}
 </json_output_example>
 
@@ -181,10 +187,13 @@ def print_watsonx_response(response_text):
         if "recommendation_reason" in result_data:
             print("\n✅ 추천 이유\n" + "="*20)
             print(result_data["recommendation_reason"])
-
-        if "dietary_tips" in result_data:
             print("\n✅ 식단 팁\n" + "="*20)
             print(result_data["dietary_tips"])
+
+
+        # if "dietary_tips" in result_data:
+        #     print("\n✅ 식단 팁\n" + "="*20)
+        #     print(result_data["dietary_tips"])
 
     except json.JSONDecodeError as e:
         print(f"❌ JSON 파싱 실패: {e}")
