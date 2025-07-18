@@ -19,7 +19,7 @@ def load_vector_db_recipe():
 
     # 2. 저장된 벡터 DB 로드 (embedding_function 없이 직접 임베딩 방식)
     vectordb_recipe = FAISS.load_local(
-        "vector_store/recipe_v2",
+        "vector_store/recipe",
         embeddings=None,
         allow_dangerous_deserialization=True
     )
