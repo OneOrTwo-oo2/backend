@@ -22,3 +22,9 @@ google-auth-oauthlib
 
 # 인증 토큰 발급
 PyJWT>=2.8.0
+
+# 비밀번호 해싱
+bcrypt>=4.0.0
+
+# 이메일 검증
+email-validator
