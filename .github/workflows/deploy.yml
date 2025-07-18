@@ -1,89 +1,91 @@
-name: Build & Push to ECR
+name: Build & Push Backend to ECR
 
 on:
   push:
     branches:
       - main
-
-env:
-  aws_region: ap-northeast-2  # 변경 시 여기에만 수정하면 됨
+    paths:
+      - 'backend/**'
 
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      api_changed: ${{ steps.check.outputs.api_changed }}
-      ai_changed: ${{ steps.check.outputs.ai_changed }}
+      api_changed: ${{ steps.api.outputs.changed }}
+      ai_changed: ${{ steps.ai.outputs.changed }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Detect changed folders
-        id: check
+      - name: Get previous commit SHA
+        id: prev
+        run: echo "sha=$(git rev-parse HEAD~1)" >> $GITHUB_OUTPUT
+
+      - name: Check for api-server changes
+        id: api
         run: |
-          PREV_SHA=$(git rev-parse HEAD~1)
-          CURR_SHA=$(git rev-parse HEAD)
-
-          echo "Comparing $PREV_SHA -> $CURR_SHA"
-
-          if git diff --name-only "$PREV_SHA" "$CURR_SHA" | grep '^backend/api-server/'; then
-            echo "api_changed=true" >> "$GITHUB_OUTPUT"
+          if git diff --name-only ${{ steps.prev.outputs.sha }} HEAD | grep '^backend/api-server/'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
           else
-            echo "api_changed=false" >> "$GITHUB_OUTPUT"
+            echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
-          if git diff --name-only "$PREV_SHA" "$CURR_SHA" | grep '^backend/ai-server/'; then
-            echo "ai_changed=true" >> "$GITHUB_OUTPUT"
+      - name: Check for ai-server changes
+        id: ai
+        run: |
+          if git diff --name-only ${{ steps.prev.outputs.sha }} HEAD | grep '^backend/ai-server/'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
           else
-            echo "ai_changed=false" >> "$GITHUB_OUTPUT"
+            echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
-  build-api-server:
+  deploy-api:
     needs: detect-changes
     if: needs.detect-changes.outputs.api_changed == 'true'
     runs-on: ubuntu-latest
-    env:
-      aws_region: ${{ env.aws_region }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v3
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.aws_region }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build and push API server image
+      - name: Login to ECR
         run: |
-          IMAGE_URI=${{ secrets.ECR_REGISTRY }}/recipego-api:latest
-          docker build -t $IMAGE_URI ./backend/api-server
-          docker push $IMAGE_URI
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+          | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
 
-  build-ai-server:
+      - name: Build and Push API Server Image
+        run: |
+          IMAGE=${{ secrets.ECR_REGISTRY }}/recipego-api:latest
+          docker build -t $IMAGE ./backend/api-server
+          docker push $IMAGE
+
+  deploy-ai:
     needs: detect-changes
     if: needs.detect-changes.outputs.ai_changed == 'true'
     runs-on: ubuntu-latest
-    env:
-      aws_region: ${{ env.aws_region }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v3
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build and push AI server image
+      - name: Login to ECR
         run: |
-          IMAGE_URI=${{ secrets.ECR_REGISTRY }}/recipego-ai:latest
-          docker build -t $IMAGE_URI ./backend/ai-server
-          docker push $IMAGE_URI
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+          | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+
+      - name: Build and Push AI Server Image
+        run: |
+          IMAGE=${{ secrets.ECR_REGISTRY }}/recipego-ai:latest
+          docker build -t $IMAGE ./backend/ai-server
+          docker push $IMAGE
