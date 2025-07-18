@@ -59,7 +59,7 @@ jobs:
 
       - name: Build and push API server image
         run: |
-          IMAGE_URI=${{ secrets.ECR_REGISTRY }}/api-server:latest
+          IMAGE_URI=${{ secrets.ECR_REGISTRY }}/recipego-api:latest
           docker build -t $IMAGE_URI ./backend/api-server
           docker push $IMAGE_URI
 
@@ -84,6 +84,6 @@ jobs:
 
       - name: Build and push AI server image
         run: |
-          IMAGE_URI=${{ secrets.ECR_REGISTRY }}/ai-server:latest
+          IMAGE_URI=${{ secrets.ECR_REGISTRY }}/recipego-ai:latest
           docker build -t $IMAGE_URI ./backend/ai-server
           docker push $IMAGE_URI
