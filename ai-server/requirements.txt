@@ -23,6 +23,8 @@ numpy<2.0
 # 설치는 pip 또는 공식 PyTorch 가이드 참고: https://pytorch.org/get-started/locally/
 
 # 기타 필수 패키지
+# HTML 파싱
+beautifulsoup4
 
 
 # 추가 설치 패키지

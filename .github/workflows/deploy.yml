@@ -1,0 +1,105 @@
+name: Deploy backend images to ECR
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'ai-server/**'
+      - 'api-server/**'
+      - '.github/workflows/deploy.yml'
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api_changed: ${{ steps.set_output.outputs.api_changed }}
+      ai_changed: ${{ steps.set_output.outputs.ai_changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get previous commit SHA
+        id: prev
+        run: echo "before_sha=$(git rev-parse HEAD^1)" >> $GITHUB_OUTPUT
+
+      - name: Check changed paths
+        id: check
+        run: |
+          BEFORE=${{ steps.prev.outputs.before_sha }}
+          AFTER=$(git rev-parse HEAD)
+
+          echo "🔍 Compare: $BEFORE → $AFTER"
+          CHANGED_FILES=$(git diff --name-only $BEFORE $AFTER)
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          API_CHANGED=$(echo "$CHANGED_FILES" | grep -q '^api-server/' && echo "true" || echo "false")
+          AI_CHANGED=$(echo "$CHANGED_FILES" | grep -q '^ai-server/' && echo "true" || echo "false")
+
+          echo "api_changed=$API_CHANGED" >> $GITHUB_OUTPUT
+          echo "ai_changed=$AI_CHANGED" >> $GITHUB_OUTPUT
+
+      - name: Set output
+        id: set_output
+        run: |
+          echo "api_changed=${{ steps.check.outputs.api_changed }}" >> $GITHUB_OUTPUT
+          echo "ai_changed=${{ steps.check.outputs.ai_changed }}" >> $GITHUB_OUTPUT
+
+  deploy-api:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Create .env file
+        run: echo "${{ secrets.API_ENV_FILE }}" > api-server/.env
+
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+          | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+
+      - name: Build & Push API Image
+        run: |
+          IMAGE=${{ secrets.ECR_REGISTRY }}/recipego-api:latest
+          docker build -t $IMAGE ./api-server
+          docker push $IMAGE
+
+  deploy-ai:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ai_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Create .env file
+        run: echo "${{ secrets.AI_ENV_FILE }}" > ai-server/.env
+
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+          | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+
+      - name: Build & Push AI Image
+        run: |
+          IMAGE=${{ secrets.ECR_REGISTRY }}/recipego-ai:latest
+          docker build -t $IMAGE ./ai-server
+          docker push $IMAGE

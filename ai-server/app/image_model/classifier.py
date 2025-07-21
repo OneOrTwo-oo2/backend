@@ -82,8 +82,8 @@ def classify_yolocls(image_path, keep, all_boxes, all_crops):
 
 
 def load_finetuned_clip(model_path, device="cuda"):
-    model_name = "ViT-B-32"
-    pretrained = "openai"
+    model_name = "ViT-H-14-378-quickgelu"
+    pretrained = "dfn5b"
     
     model, _, preprocess = open_clip.create_model_and_transforms(model_name, pretrained=pretrained, device=device, force_quick_gelu=True)
     if os.path.exists(model_path):
@@ -95,25 +95,52 @@ def load_finetuned_clip(model_path, device="cuda"):
     return model, preprocess, tokenizer
 
 
+# 파일 상단(최초 1회만 로딩)
+clip_model = None
+preprocess = None
+tokenizer = None
+
+def get_clip_model():
+    global clip_model, preprocess, tokenizer
+    if clip_model is None:
+        model_path = os.path.join(PRETRAINED_FOLDER, "clip", CLIP_PRETRAINED)
+        clip_model, preprocess, tokenizer = load_finetuned_clip(model_path, device="cuda")
+    return clip_model, preprocess, tokenizer
+
+
 ##### open_clip 사용하여 fine-tune 시도
 def classify_clip(image_path, keep, all_boxes, all_crops):
     """CLIP 모델을 이용한 자유 라벨 기반 분류"""
+    import time
     image = cv2.imread(image_path)
     detections = []
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    
-    model_path = os.path.join(PRETRAINED_FOLDER,"clip",CLIP_PRETRAINED)
-    clip_model, preprocess, tokenizer = load_finetuned_clip(model_path, device)
 
+    # --- 1. YOLO 박스 검출 이후 ~ CLIP 모델 로딩 시작 ---
+    t0 = time.time()
+    clip_model, preprocess, tokenizer = get_clip_model()
+    t1 = time.time()
+    print(f"[TIME] CLIP 모델 로딩: {t1-t0:.3f}초")
+
+    # --- 2. 텍스트 임베딩 생성 ---
     text_prompts = [f"A photo of {label.replace('_', ' ')}" for label in CLASS_LABELS]
     text_tokens = tokenizer(text_prompts).to(device)
-
     with torch.no_grad():
         text_features = clip_model.encode_text(text_tokens)
         text_features /= text_features.norm(dim=-1, keepdim=True)
+    t2 = time.time()
+    print(f"[TIME] 텍스트 임베딩 생성: {t2-t1:.3f}초")
 
-    for i in keep:
-        idx = int(i.item()) if isinstance(i, torch.Tensor) else int(i)
+    # --- 3. crop별 루프 시작 전 ---
+    t3 = time.time()
+    print(f"[TIME] crop별 분류 루프 진입: {t3-t2:.3f}초")
+
+    # --- 전체 타이머 시작 ---
+    start_time = time.time()
+
+    for i, box_idx in enumerate(keep):
+        crop_start = time.time()
+        idx = int(box_idx.item()) if isinstance(box_idx, torch.Tensor) else int(box_idx)
         x1, y1, x2, y2 = map(int, all_boxes[idx])
         crop = all_crops[idx]
 
@@ -142,6 +169,12 @@ def classify_clip(image_path, keep, all_boxes, all_crops):
             "conf": round(cls_conf, 3),
             "bbox": [x1, y1, x2, y2]
         })
+        crop_elapsed = time.time() - crop_start
+        print(f"[CLIP 분류] crop {i+1}/{len(keep)}: {crop_elapsed:.3f}초")
+
+    # --- 전체 타이머 끝 ---
+    elapsed = time.time() - start_time
+    print(f"[CLIP 분류 소요 시간] {elapsed:.3f}초 (YOLO 박스 이후 ~ CLIP 분류 전체)")
 
     return detections, image
 
