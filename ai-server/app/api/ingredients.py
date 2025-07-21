@@ -33,11 +33,11 @@ async def get_ingredients(file: UploadFile = File(...)):
     if not success:
         raise HTTPException(status_code=500, detail="이미지 저장 실패")
     
-    labels = detect_ingredient(save_path)
+    ingredients_with_confidence = detect_ingredient(save_path)
 
     return JSONResponse(content={
         "filename": file.filename,
         "saved_path": save_path,
-        "labels":labels,
+        "ingredients": ingredients_with_confidence,
         "content_type": file.content_type
     })
