@@ -17,7 +17,12 @@ def on_startup():
 # ✅ CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://recipego-frontend-service:3000", "http://www.recipego-oot.com:30080/"],  # 실제 프론트 주소들
+    allow_origins=[
+        "http://localhost:3000",
+        "http://recipego-frontend-service:3000",
+        "https://www.recipego-oot.com",
+        "https://www.recipego-oot.com:80"      
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
