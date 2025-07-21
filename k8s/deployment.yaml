@@ -1,26 +1,26 @@
-# k8s/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fastapi-app
+  name: recipego-ai
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: fastapi-app
+      app: recipego-ai
   template:
     metadata:
       labels:
-        app: fastapi-app
+        app: recipego-ai
     spec:
       containers:
-        - name: fastapi
-          image: fastapi-app:latest
+        - name: recipego-ai
+          image: recipego-ai:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 8000
+          resources:
+            limits:
+              nvidia.com/gpu: 1
           envFrom:
             - configMapRef:
                 name: app-config
-            # - secretRef:
-            #     name: fastapi-secret
