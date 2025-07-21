@@ -209,3 +209,5 @@ pip-selfcheck.json
 *.csv
 
 k8s/
+
+.vscode
