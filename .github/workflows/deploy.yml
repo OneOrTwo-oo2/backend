@@ -5,8 +5,9 @@ on:
     branches:
       - main
     paths:
-      - 'backend/**'
-      - '.github/workflows/backend-deploy.yml'
+      - 'ai-server/**'
+      - 'api-server/**'
+      - '.github/workflows/deploy.yml'
 
 jobs:
   detect-changes:
@@ -35,8 +36,8 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
-          API_CHANGED=$(echo "$CHANGED_FILES" | grep -q '^backend/api-server/' && echo "true" || echo "false")
-          AI_CHANGED=$(echo "$CHANGED_FILES" | grep -q '^backend/ai-server/' && echo "true" || echo "false")
+          API_CHANGED=$(echo "$CHANGED_FILES" | grep -q '^api-server/' && echo "true" || echo "false")
+          AI_CHANGED=$(echo "$CHANGED_FILES" | grep -q '^ai-server/' && echo "true" || echo "false")
 
           echo "api_changed=$API_CHANGED" >> $GITHUB_OUTPUT
           echo "ai_changed=$AI_CHANGED" >> $GITHUB_OUTPUT
@@ -62,7 +63,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Create .env file
-        run: echo "${{ secrets.API_ENV_FILE }}" > backend/api-server/.env
+        run: echo "${{ secrets.API_ENV_FILE }}" > api-server/.env
 
       - name: Login to ECR
         run: |
@@ -72,7 +73,7 @@ jobs:
       - name: Build & Push API Image
         run: |
           IMAGE=${{ secrets.ECR_REGISTRY }}/recipego-api:latest
-          docker build -t $IMAGE ./backend/api-server
+          docker build -t $IMAGE ./api-server
           docker push $IMAGE
 
   deploy-ai:
@@ -90,7 +91,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Create .env file
-        run: echo "${{ secrets.AI_ENV_FILE }}" > backend/ai-server/.env
+        run: echo "${{ secrets.AI_ENV_FILE }}" > ai-server/.env
 
       - name: Login to ECR
         run: |
@@ -100,5 +101,5 @@ jobs:
       - name: Build & Push AI Image
         run: |
           IMAGE=${{ secrets.ECR_REGISTRY }}/recipego-ai:latest
-          docker build -t $IMAGE ./backend/ai-server
+          docker build -t $IMAGE ./ai-server
           docker push $IMAGE

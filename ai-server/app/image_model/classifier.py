@@ -82,8 +82,8 @@ def classify_yolocls(image_path, keep, all_boxes, all_crops):
 
 
 def load_finetuned_clip(model_path, device="cuda"):
-    model_name = "ViT-SO400M-14-SigLIP"
-    pretrained = "webli"
+    model_name = "ViT-H-14-378-quickgelu"
+    pretrained = "dfn5b"
     
     model, _, preprocess = open_clip.create_model_and_transforms(model_name, pretrained=pretrained, device=device, force_quick_gelu=True)
     if os.path.exists(model_path):

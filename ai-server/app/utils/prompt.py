@@ -88,6 +88,7 @@ def build_prompt(
         # if r.get("URL"):
         #     recipe_section += f"  URL: {r['URL']}\n"
         # recipe_section += "\n"
+
     # 3. context가 없더라도 빈 블록 유지
     context_text = context.strip() if context else "N/A"
     # 4. 프롬프트 전체 구성
@@ -155,13 +156,16 @@ def print_watsonx_response(response_text):
             print(f"    - URL: {recipe.get('url', '정보 없음')}")
             print("-" * 20)
         if "recommendation_reason" in result_data:
-            print("\n:흰색_확인_표시: 추천 이유\n" + "="*20)
+            print("\n✅ 추천 이유\n" + "="*20)
             print(result_data["recommendation_reason"])
-            print("\n:흰색_확인_표시: 식단 팁\n" + "="*20)
+            print("\n✅ 식단 팁\n" + "="*20)
             print(result_data["dietary_tips"])
+
+
         # if "dietary_tips" in result_data:
-        #     print("\n:흰색_확인_표시: 식단 팁\n" + "="*20)
+        #     print("\n✅ 식단 팁\n" + "="*20)
         #     print(result_data["dietary_tips"])
+
     except json.JSONDecodeError as e:
         print(f":x: JSON 파싱 실패: {e}")
         print("원본 응답:")
