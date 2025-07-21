@@ -52,8 +52,8 @@ CLASS_MAP = {
 BLOCKLIST = {"bowl", "spoon", "fork", "knife", "dining table", "plate"}
 
 # hyperparams
-CONF_THRESHOLD = 0.12        # 전체 detection confidence 임계값
-CLS_CONF_THRESHOLD = 0.1     # classification confidence 임계값
+CONF_THRESHOLD = 0.05        # 전체 detection confidence 임계값 (더 낮춤)
+CLS_CONF_THRESHOLD = 0.05    # classification confidence 임계값 (더 관대하게)
 MIN_BOX_SIZE = 15            # 너무 작은 박스 제거
 MAX_BOX_SIZE = 510           # 너무 큰 박스 제거
 
