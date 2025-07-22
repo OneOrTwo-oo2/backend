@@ -66,7 +66,10 @@ def classify_yolocls(image_path, keep, all_boxes, all_crops):
         cls_label = cls_result.names[cls_id]
         cls_conf = float(cls_result.probs.data[cls_id])
 
-        if cls_label in BLOCKLIST or cls_conf < CLS_CONF_THRESHOLD:
+        # BLOCKLIST 조건부 필터링: 블록리스트 라벨은 conf 0.95 이상일 때만 허용
+        if cls_label in BLOCKLIST and cls_conf < 0.95:
+            continue
+        if cls_conf < CLS_CONF_THRESHOLD:
             continue
 
         kor_label, category = get_class_info(cls_label)
@@ -156,7 +159,20 @@ def classify_clip(image_path, keep, all_boxes, all_crops):
         cls_label = CLASS_LABELS[cls_id]
         cls_conf = float(similarity[0, cls_id])
 
-        if cls_label in BLOCKLIST or cls_conf < CLS_CONF_THRESHOLD:
+        # WHITELIST_MAP 표준화 적용
+        from image_model.config import WHITELIST_MAP
+        if cls_label in WHITELIST_MAP:
+            std_label = WHITELIST_MAP[cls_label]
+            print(f"[WHITELIST 표준화] {cls_label} → {std_label}")
+            cls_label = std_label
+
+        # BLOCKLIST 체크 프린트
+        print(f"[BLOCKLIST 체크] label: {cls_label}, conf: {cls_conf:.3f}, BLOCKLIST: {cls_label in BLOCKLIST}")
+
+        # BLOCKLIST 조건부 필터링: 블록리스트 라벨은 conf 0.9 이상일 때만 허용
+        if cls_label in BLOCKLIST and cls_conf < 0.9:
+            continue
+        if cls_conf < CLS_CONF_THRESHOLD:
             continue
 
         # box 및 label 이미지에 표시
@@ -169,6 +185,8 @@ def classify_clip(image_path, keep, all_boxes, all_crops):
             "conf": round(cls_conf, 3),
             "bbox": [x1, y1, x2, y2]
         })
+        # CLIP 결과 프린트
+        print(f"[CLIP 결과] label: {cls_label}, conf: {cls_conf:.3f}, bbox: {[x1, y1, x2, y2]}")
         crop_elapsed = time.time() - crop_start
         print(f"[CLIP 분류] crop {i+1}/{len(keep)}: {crop_elapsed:.3f}초")
 
