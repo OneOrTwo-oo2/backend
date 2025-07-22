@@ -26,7 +26,7 @@ class RecipeRequest(BaseModel):
 def fetch_thumbnail_by_title(title: str) -> dict:
     try:
         base_url = "https://www.10000recipe.com/recipe/list.html"
-        params = {"q": title}
+        params = {"q": title, "order": "accuracy"}  # order=accuracy로 고정
         url = f"{base_url}?{urlencode(params)}"
 
         headers = {
