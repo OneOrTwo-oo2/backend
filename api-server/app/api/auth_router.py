@@ -114,9 +114,9 @@ def email_signup(payload: EmailSignupRequest):
         # 쿠키 설정
         res = JSONResponse(content={"message": "회원가입이 완료되었습니다.", "isNewUser": True})
         res.set_cookie(key="access_token", value=access_token,
-                       httponly=True, secure=True, samesite="Strict", max_age=3600)
+                       httponly=True, secure=True, samesite="None", max_age=3600)
         res.set_cookie(key="refresh_token", value=refresh_token,
-                       httponly=True, secure=True, samesite="Strict", max_age=7*24*60*60)
+                       httponly=True, secure=True, samesite="None", max_age=7*24*60*60)
         return res
         
     except HTTPException:
@@ -151,9 +151,9 @@ def email_login(payload: EmailLoginRequest):
         # 쿠키 설정
         res = JSONResponse(content={"message": "로그인이 완료되었습니다.", "isNewUser": False})
         res.set_cookie(key="access_token", value=access_token,
-                       httponly=True, secure=True, samesite="Strict", max_age=3600)
+                       httponly=True, secure=True, samesite="None", max_age=3600)
         res.set_cookie(key="refresh_token", value=refresh_token,
-                       httponly=True, secure=True, samesite="Strict", max_age=7*24*60*60)
+                       httponly=True, secure=True, samesite="None", max_age=7*24*60*60)
         return res
         
     except HTTPException:
@@ -200,9 +200,9 @@ def google_login(payload: GoogleLoginRequest):
         # ✅ 쿠키 설정
         res = JSONResponse(content={"isNewUser": is_new})
         res.set_cookie(key="access_token", value=access_token,
-                       httponly=True, secure=True, samesite="Strict", max_age=3600)
+                       httponly=True, secure=True, samesite="None", max_age=3600)
         res.set_cookie(key="refresh_token", value=refresh_token,
-                       httponly=True, secure=True, samesite="Strict", max_age=7*24*60*60)
+                       httponly=True, secure=True, samesite="None", max_age=7*24*60*60)
         return res
 
     except ValueError:
@@ -228,7 +228,7 @@ def refresh_token(request: Request):
         new_access_token = create_access_token({"user_id": user_id, "email": email})
         res = JSONResponse(content={"message": "Access token refreshed"})
         res.set_cookie(key="access_token", value=new_access_token,
-                       httponly=True, secure=True, samesite="Strict", max_age=3600)
+                       httponly=True, secure=True, samesite="None", max_age=3600)
         return res
 
     except Exception as e:
