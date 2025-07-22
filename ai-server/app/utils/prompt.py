@@ -13,7 +13,7 @@ def bm25_filter(documents, filters: dict):
     ]
 
 
-def search_recipe_with_filters(query: str, bm25_retriever, faiss_loaded, filters: dict = None, top_k: int = 10):
+def search_recipe_with_filters(query, bm25_retriever, faiss_loaded, filters: dict = None, top_k: int = 10):
     # 쿼리 전처리: 리스트면 join, 문자열이면 그대로
     if isinstance(query, list):
         query_str = " ".join(query)
@@ -29,7 +29,7 @@ def search_recipe_with_filters(query: str, bm25_retriever, faiss_loaded, filters
     faiss_kwargs = {"k": 50}
     if filters:
         faiss_kwargs["filters"] = filters
-    faiss_results = faiss_retriever = faiss_loaded.as_retriever(search_kwargs=faiss_kwargs).get_relevant_documents(" ".join(query))
+    faiss_results = faiss_loaded.as_retriever(search_kwargs=faiss_kwargs).get_relevant_documents(query_str)
     print("faiss_results!!! ",faiss_results[:1])
     # 점수 합산을 위한 dict
     scored_docs = defaultdict(lambda: {"doc": None, "bm25": 0, "faiss": 0, "sources": set()})
@@ -60,6 +60,27 @@ def search_recipe_with_filters(query: str, bm25_retriever, faiss_loaded, filters
         print("-" * 60)
 
     return [doc for doc, _, _ in results[:top_k]]
+
+
+def search_bm25_only(query, bm25_retriever, filters: dict = None, top_k: int = 10):
+    # 쿼리가 리스트라면 문자열로 변환
+    if isinstance(query, list):
+        query = " ".join(query)
+
+    # BM25 검색
+    results = bm25_retriever.get_relevant_documents(" ".join(query))
+
+    # 필터링
+    if filters:
+        results = bm25_filter(results, filters)
+
+    # 출력
+    for i, doc in enumerate(results[:top_k]):
+        print(f"\n📌 Top {i+1}")
+        print(doc.page_content)
+        print("-" * 60)
+
+    return results[:top_k]
 
 
 def build_prompt(

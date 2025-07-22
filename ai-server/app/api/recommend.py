@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from utils.youtube import search_youtube_videos
-from utils.prompt import build_prompt, search_recipe_with_filters, print_watsonx_response
+from utils.prompt import build_prompt, search_bm25_only, print_watsonx_response    #search_recipe_with_filters
 import config
 import time
 from utils.watsonx import ask_watsonx, parse_watsonx_json
@@ -114,12 +114,18 @@ async def recommend_recipe(req: RecipeRequest):
 
     top_k = 50
     start = time.time()
-    filtered_recipes = search_recipe_with_filters(
-       query=ingredients,
-       bm25_retriever=bm25_retriever,
-       faiss_loaded=faiss_loaded,
-       filters=filters,
-       top_k=top_k)
+    # filtered_recipes = search_recipe_with_filters(
+    #    query=ingredients,
+    #    bm25_retriever=bm25_retriever,
+    #    faiss_loaded=faiss_loaded,
+    #    filters=filters,
+    #    top_k=top_k)
+    filtered_recipes = search_bm25_only(
+        query=ingredients,
+        bm25_retriever=bm25_retriever,
+        filters=filters,
+        top_k=top_k
+    )
 
     print(f"🔍 유사 레시피 {top_k}개 검색 완료 (소요: {time.time() - start:.2f}초)")
     print(f"🔍 유사 레시피: {filtered_recipes[:20]}")
