@@ -3,9 +3,14 @@ import cv2
 import torch
 from ultralytics import YOLO
 from torchvision.ops import nms
+import base64
 
 from image_model.config import *
 from image_model.classifier import classify_yolocls, classify_clip, classify_resnet
+
+def image_to_base64(img):
+    _, buffer = cv2.imencode('.png', img)
+    return base64.b64encode(buffer).decode('utf-8')
 
 # :흰색_확인_표시: 전체 파이프라인
 def detect_nms(image_path):
@@ -18,7 +23,7 @@ def detect_nms(image_path):
     for name, model_path in MODEL_PATHS.items():
         model_path = os.path.join(PRETRAINED_FOLDER,YOLO_BOX_FOLDER,model_path)
         model = YOLO(model_path)
-        result = model(image_path, conf=0.05, iou=0.65, verbose=False)[0]
+        result = model(image_path, conf=0.05, iou=0.6, verbose=False)[0]
         for box in result.boxes.data:
             x1, y1, x2, y2 = map(int, box[:4])
             x1, y1 = max(0, x1), max(0, y1)
@@ -60,8 +65,41 @@ if __name__ == "__main__":
 
             keep, all_boxes, all_crops = detect_nms(image_path)
             # detections, result_img = classify_yolocls(image_path,keep,all_boxes,all_crops)
-            detections, result_img = classify_clip(image_path,keep,all_boxes,all_crops)
-            # detections, result_img = classify_resnet(image_path,keep,all_boxes,all_crops)
+            detections = []
+            for i, crop in enumerate(all_crops):
+                crop_base64 = image_to_base64(crop)
+                text_prompts = []
+                for label in CLASS_LABELS:
+                    base = label.replace('_', ' ')
+                    text_prompts.extend([
+                        f"A photo of {base}",
+                        f"A close-up of {base}",
+                        f"An ingredient: {base}",
+                        f"A fresh {base} on a table"
+                    ])
+                # 이후 각 crop별로 여러 프롬프트 결과 중 가장 높은 확률/평균 사용
+                # 현재는 단순히 첫 번째 프롬프트만 사용
+                text_prompt = text_prompts[0]
+
+                # 라벨 매핑 (한글 -> 이모지)
+                korean_label = CLASS_LABELS[i]
+                mapped_label = emojiMap.get(korean_label, "매핑없음")
+
+                # 크롭 이미지 프론트로 전달
+                crop_image_base64 = image_to_base64(crop)
+
+                # 신뢰도 임계값 적용
+                if confs[i] < CLS_CONF_THRESHOLD:
+                    continue
+
+                detections.append({
+                    "category": korean_label,
+                    "korean": korean_label,
+                    "conf": confs[i],
+                    "bbox": [x1s[i], y1s[i], x2s[i], y2s[i]],
+                    "crop_image": crop_image_base64,
+                    "mapped_label": mapped_label
+                })
             
             # 결과 출력
             print(f"감지 결과 ({file}):")
