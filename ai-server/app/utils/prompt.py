@@ -4,63 +4,64 @@ import json
 # #from ibm_watsonx_ai.foundation_models import ModelInference
 # from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
 # from ibm_watsonx_ai.foundation_models.utils.enums import ModelTypes, DecodingMethods
-def search_top_k(
-    query,
-    vectordb,
-    model,
-    top_k=5,
-    exclude_ingredients=None,
-    level=None,
-    kind=None
-):
-    # # 문자열 → 리스트 변환
-    #exclude_ingredients = [i.strip() for i in exclude_ingredients.split(",")] if exclude_ingredients else []
-    # difficulty_levels = [d.strip() for d in difficulty_levels_str.split(",")] if difficulty_levels_str else []
-    # types = [t.strip() for t in types_str.split(",")] if types_str else []
-    # :흰색_확인_표시: 벡터 검색 (여유 있게 top_k * 10개 가져와서 필터링)
-    query = ", ".join(query)
-    query_vector = model.encode([query]).astype("float32")
-    scores, indices = vectordb.index.search(query_vector, k=top_k * 10)
-    results = []
-    seen_titles = set()  # 중복 제거를 위한 제목 추적
-    for i, idx in enumerate(indices[0]):
-        doc_id = vectordb.index_to_docstore_id[idx]
-        doc = vectordb.docstore.search(doc_id)
-        meta = doc.metadata
-        score = scores[0][i]
-        재료 = meta.get("재료", "")
-        난이도 = meta.get("난이도", "").strip()
-        종류 = meta.get("종류", "").strip()
-        제목 = meta.get("제목", "").strip()
-        # 1. 중복 제목 체크
-        if 제목 in seen_titles:
-            continue
-        seen_titles.add(제목)
-        # 2. exclude_ingredients: 재료 문자열 안에 하나라도 포함되면 제외
-        if exclude_ingredients and any(exc in 재료 for exc in exclude_ingredients):
-            continue
-        # 3. 난이도 필터링 (정확히 일치)
-        if level and 난이도 not in level:
-            continue
-        # 4. 종류 필터링 (정확히 일치)
-        if kind and 종류 not in kind:
-            continue
-        # :흰색_확인_표시: 결과 저장
-        meta["score"] = score
-        results.append((doc, score))
-        # :흰색_확인_표시: top_k만 남기고 중단
-        if len(results) >= top_k:
-            break
-    return results
-# :흰색_확인_표시: 결과 정리: WatsonX로 넘길 후보 레시피 텍스트 구성
-def format_recipe(doc: Document, index: int) -> str:
-    meta = doc.metadata
-    return f"""{index}. {meta.get('제목', '')}
-- 종류: {meta.get('종류','')}
-- 재료: {meta.get('재료', '')}
-- 조리순서: {meta.get('조리순서', '')}
-- url: {meta.get('URL', '')}
-"""
+from collections import defaultdict
+
+def bm25_filter(documents, filters: dict):
+    return [
+        doc for doc in documents
+        if all(doc.metadata.get(k) == v for k, v in filters.items())
+    ]
+
+
+def search_recipe_with_filters(query: str, bm25_retriever, faiss_loaded, filters: dict = None, top_k: int = 10):
+    # 쿼리 전처리: 리스트면 join, 문자열이면 그대로
+    if isinstance(query, list):
+        query_str = " ".join(query)
+    else:
+        query_str = query
+    print("함수 진입!", query_str)
+    bm25_results = bm25_retriever.get_relevant_documents(query_str)
+    if filters:
+        bm25_results = bm25_filter(bm25_results, filters)
+    print("bm25_results!!! ",bm25_results[:1])
+
+    # ✅ FAISS 검색 시 필터 전달
+    faiss_kwargs = {"k": 50}
+    if filters:
+        faiss_kwargs["filters"] = filters
+    faiss_results = faiss_retriever = faiss_loaded.as_retriever(search_kwargs=faiss_kwargs).get_relevant_documents(" ".join(query))
+    print("faiss_results!!! ",faiss_results[:1])
+    # 점수 합산을 위한 dict
+    scored_docs = defaultdict(lambda: {"doc": None, "bm25": 0, "faiss": 0, "sources": set()})
+
+    for rank, doc in enumerate(bm25_results):
+        key = doc.metadata.get("URL") #or doc.page_content.strip()[:100]
+        scored_docs[key]["doc"] = doc
+        scored_docs[key]["bm25"] = 1 - rank / len(bm25_results)  # 0~1 사이 점수
+        scored_docs[key]["sources"].add("BM25")
+
+    for rank, doc in enumerate(faiss_results):
+        key = doc.metadata.get("URL") #or doc.page_content.strip()[:100]
+        scored_docs[key]["doc"] = doc
+        scored_docs[key]["faiss"] = 1 - rank / len(faiss_results)
+        scored_docs[key]["sources"].add("FAISS")
+
+    # 최종 점수 계산 (가중치 적용)
+    results = [
+        (v["doc"], 0.8 * v["bm25"] + 0.2 * v["faiss"], v["sources"])
+        for v in scored_docs.values()
+    ]
+    results.sort(key=lambda x: x[1], reverse=True)
+
+    # 결과 출력
+    for i, (doc, score, sources) in enumerate(results[:20]):
+        print(f"\n📌 Top {i+1} (점수: {score:.3f}) [출처: {', '.join(sources)}]")
+        print(doc.page_content)
+        print("-" * 60)
+
+    return [doc for doc, _, _ in results[:top_k]]
+
+
 def build_prompt(
     ingredients,
     filtered_recipes,
@@ -77,17 +78,6 @@ def build_prompt(
         user_info += f"\n식단 선호: {preference}"
     if diseases and diseases != "해당없음":
         user_info += f"\n질환 정보: {diseases}"
-    # 2. 후보 레시피 정제 (각 레시피를 구조적으로 나열)
-    recipe_section = ""
-    for r in filtered_recipes:
-        recipe_section += f"- ID: {r.get('id')}\n"
-        recipe_section += f"  제목: {r.get('제목')}\n"
-        recipe_section += f"  주요 재료: {', '.join(r.get('재료', []))}\n"
-        recipe_section += f"  URL: {r.get('URL')}\n"
-        recipe_section += "\n"
-        # if r.get("URL"):
-        #     recipe_section += f"  URL: {r['URL']}\n"
-        # recipe_section += "\n"
 
     # 3. context가 없더라도 빈 블록 유지
     context_text = context.strip() if context else "N/A"
@@ -99,7 +89,7 @@ def build_prompt(
 {user_info}
 </user_info>
 <candidate_recipes>
-{recipe_section.strip()}
+{filtered_recipes}
 </candidate_recipes>
 <context>
 {context_text}
@@ -143,6 +133,7 @@ def build_prompt(
 <response>
 """
     return prompt
+
 def print_watsonx_response(response_text):
     try:
         # WatsonX 응답 문자열 → 파싱
