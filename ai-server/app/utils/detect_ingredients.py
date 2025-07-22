@@ -28,6 +28,6 @@ def detect_ingredient(image_path):
     sorted_ingredients = sorted(unique_ingredients.values(), key=lambda x: x['confidence'], reverse=True)
     
     # 최종 필터링: 너무 낮은 정확도 제거 (더 관대하게)
-    filtered_ingredients = [item for item in sorted_ingredients if item['confidence'] >= 0.03]
+    filtered_ingredients = [item for item in sorted_ingredients if item['confidence'] >= 0.07]
     
     return filtered_ingredients

@@ -23,7 +23,7 @@ def detect_nms(image_path):
     for name, model_path in MODEL_PATHS.items():
         model_path = os.path.join(PRETRAINED_FOLDER,YOLO_BOX_FOLDER,model_path)
         model = YOLO(model_path)
-        result = model(image_path, conf=0.05, iou=0.6, verbose=False)[0]
+        result = model(image_path, conf=0.06, iou=0.66, verbose=False)[0]
         for box in result.boxes.data:
             x1, y1, x2, y2 = map(int, box[:4])
             x1, y1 = max(0, x1), max(0, y1)
