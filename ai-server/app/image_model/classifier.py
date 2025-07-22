@@ -9,6 +9,10 @@ import numpy as np
 from torchvision import transforms
 
 
+# 파일 상단(최초 1회만 로딩)
+clip_model = None
+preprocess = None
+tokenizer = None
 
 def draw_labeled_box(image: np.ndarray, bbox: list[int], label: str, color=COLOR, font_size=12):
     """
@@ -82,23 +86,19 @@ def classify_yolocls(image_path, keep, all_boxes, all_crops):
 
 
 def load_finetuned_clip(model_path, device="cuda"):
-    model_name = "ViT-H-14-378-quickgelu"
-    pretrained = "dfn5b"
-    
-    model, _, preprocess = open_clip.create_model_and_transforms(model_name, pretrained=pretrained, device=device, force_quick_gelu=True)
+    model_name = "ViT-L-14"
+    pretrained = "openai"
+    model, _, preprocess = open_clip.create_model_and_transforms(
+        model_name, pretrained=pretrained, device=device
+    )
     if os.path.exists(model_path):
         print('using pretrained model')
         model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
     tokenizer = open_clip.get_tokenizer(model_name)
-
     return model, preprocess, tokenizer
 
 
-# 파일 상단(최초 1회만 로딩)
-clip_model = None
-preprocess = None
-tokenizer = None
 
 def get_clip_model():
     global clip_model, preprocess, tokenizer

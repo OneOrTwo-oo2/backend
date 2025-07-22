@@ -93,3 +93,19 @@ def delete_bookmark(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"삭제 실패: {str(e)}")
+
+
+@router.delete("/bookmarks/all")
+def delete_all_bookmarks(
+    user=Depends(get_current_user_from_cookie),
+    db: Session = Depends(get_db)
+):
+    try:
+        bookmarks = db.query(Bookmark).filter_by(user_id=user.user_id).all()
+        for b in bookmarks:
+            db.delete(b)
+        db.commit()
+        return {"message": "모든 북마크가 삭제되었습니다."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"전체 삭제 실패: {str(e)}")
