@@ -5,6 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # ✅ Python 3.10은 기본 apt 저장소에 있음
 RUN apt-get update && apt-get install -y \
     python3.10 python3.10-dev python3-pip \
+    libgl1-mesa-glx \
     && ln -sf /usr/bin/python3.10 /usr/bin/python \
     && ln -sf /usr/bin/pip3 /usr/bin/pip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
