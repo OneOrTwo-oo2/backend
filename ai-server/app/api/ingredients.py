@@ -35,6 +35,12 @@ async def get_ingredients(file: UploadFile = File(...)):
     
     ingredients_with_confidence = detect_ingredient(save_path)
 
+    # 이미지 분석 후 저장된 파일 삭제
+    try:
+        os.remove(save_path)
+    except Exception as e:
+        print(f"이미지 삭제 실패: {e}")
+
     return JSONResponse(content={
         "filename": file.filename,
         "saved_path": save_path,

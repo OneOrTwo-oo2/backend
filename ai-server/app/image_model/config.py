@@ -17,7 +17,7 @@ CLASS_LABELS2 = [
 ]
 
 CLASS_LABELS = [
-    "Baguette", "Coffee", "chili_pepper", "Juice", "Perilla_leaves", "Sliced_cheese", "Soju", "Tea", "Water", "Wine", "abalone", "apple", "avocado", "bacon", "bean_sprout", "beef", "blueberry", "brisket", "broccoli",  "butter", "button_mushroom", "cabbage", "napa_cabbage", "carrot", "cauliflower", "celery", "cherry", "chicken_breast", "chicken_wing", "chive", "cilantro", "clam",  "cooking_oil", "cooking_syrup", "crab", "cucumber", "duck", "egg", "eggplant", "fish",  "flounder", "fresh_cream", "fusilli", "garlic", "ginger", "grape", "green_onion", "ham", "hoisin_sauce", "honey", "kelp", "kimbap", "kimchi", "kiwi",  "lasagna_sheet", "laver", "lemon", "lettuce", "lobster", "macaroni", "mango",  "margarine", "mayonnaise", "meatball", "milk", "minced_garlic", "mussel",  "nuts", "octopus", "olive_oil", "orange", "peach", "pear", "penne", "pineapple", "plain_bread(bread)","plum", "pork_back_ribs", "pork_belly", "pork_neck", "potato", "radish", "red_onion", "ribs", "salad", "salmon", "salt", "sausage",  "seaweed", "sesame_oil", "shank",  "shrimp", "sirloin", "sliced_rice_cake",  "soybean_paste", "spaghetti", "spam", "spinach", "sprite", "squid", "strawberry", "sugar", "sweet_potato",  "tomato", "tuna", "vinegar", "watermelon", "whipping_cream", "white_rice", "yogurt", "zucchini","paprika"
+    "Baguette", "Coffee", "pepper", "chili_pepper", "Juice", "Perilla_leaves", "Sliced_cheese", "Soju", "Tea", "Water", "Wine", "abalone", "apple", "avocado", "bacon", "bean_sprout", "beef", "blueberry", "brisket", "broccoli",  "butter", "button_mushroom", "cabbage", "napa_cabbage", "carrot", "cauliflower", "celery", "cherry", "chicken_breast", "chicken_wing", "chive", "cilantro", "clam",  "cooking_oil", "cooking_syrup", "crab", "cucumber", "duck", "egg", "eggplant", "fish",  "flounder", "fresh_cream", "fusilli", "garlic", "ginger", "grape", "green_onion", "ham", "hoisin_sauce", "honey", "kelp", "kimbap", "kimchi", "kiwi",  "lasagna_sheet", "laver", "lemon", "lettuce", "lobster", "macaroni", "mango",  "margarine", "mayonnaise", "meatball", "milk", "minced_garlic", "mussel",  "nuts", "octopus", "olive_oil", "orange", "peach", "pear", "banana","penne", "pineapple", "plain_bread","plum", "pork_back_ribs", "pork_belly", "pork_neck", "potato", "radish", "red_onion", "ribs", "salad", "salmon", "salt", "sausage",  "seaweed", "sesame_oil", "shank",  "shrimp", "sirloin", "sliced_rice_cake",  "soybean_paste", "spaghetti", "spam", "spinach", "sprite", "squid", "strawberry", "sugar", "sweet_potato",  "tomato", "tuna", "vinegar", "watermelon", "whipping_cream", "white_rice", "yogurt", "zucchini","paprika"
 ]
 
 # CLASS_LABELS 기반 화이트리스트 매핑 (한글, 영어, 다양한 영어 표현)
@@ -180,8 +180,7 @@ WHITELIST_MAP = {
 }
 
 # 예외처리 labels
-BLOCKLIST = {"bowl", "spoon", "fork", "knife", "dining table", "plate","Baguette","pork_neck","sausage","hoisin_sauce","chicken_wing","scallop","mayonnaise","whipping_cream","coffee"}
-
+BLOCKLIST = {"bowl", "spoon", "fork", "knife", "dining table", "plate","Baguette","pork_neck","sausage","hoisin_sauce","chicken_wing","scallop","mayonnaise","whipping_cream","coffee","banana","zucchini"}
 
 
 
@@ -216,7 +215,7 @@ CLASS_MAP = {
 
 # hyperparams
 CONF_THRESHOLD = 0.05        # 전체 detection confidence 임계값 (더 낮춤)
-CLS_CONF_THRESHOLD = 0.05    # classification confidence 임계값 (더 관대하게)
+CLS_CONF_THRESHOLD = 0.15    # classification confidence 임계값 (더 관대하게)
 MIN_BOX_SIZE = 15            # 너무 작은 박스 제거
 MAX_BOX_SIZE = 510           # 너무 큰 박스 제거
 
