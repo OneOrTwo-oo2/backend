@@ -31,3 +31,5 @@ beautifulsoup4
 ultralytics
 open_clip_torch
 
+# bm25 관련 패키지
+rank_bm25
