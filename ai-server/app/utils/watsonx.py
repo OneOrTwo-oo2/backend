@@ -80,7 +80,9 @@ def ask_watsonx(prompt: str) -> str:
             "top_p": 1,
             "repetition_penalty": 1.1
         },
-        "model_id":"meta-llama/llama-3-3-70b-instruct",
+        # meta-llama/llama-3-2-3b-instruct
+        # "model_id":"meta-llama/llama-3-3-70b-instruct",
+        "model_id":"meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
         "project_id": PROJECT_ID,
     }
     try:
