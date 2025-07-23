@@ -3,7 +3,7 @@ import requests
 import re
 import json
 import time
-from config import WATSONX_URL
+from config import WATSONX_URL, PROJECT_ID
 
 # 전역 변수로 토큰과 만료 시간 관리
 _access_token = None
@@ -75,13 +75,15 @@ def ask_watsonx(prompt: str) -> str:
             "decoding_method": "sample",
             "max_new_tokens": 8096,
             "min_new_tokens": 0,
-            "temperature": 0.2,
+            "temperature": 0.3,
             "top_k": 30,
             "top_p": 1,
             "repetition_penalty": 1.1
         },
+        # meta-llama/llama-3-2-3b-instruct
+        # "model_id":"meta-llama/llama-3-3-70b-instruct",
         "model_id":"meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
-        "project_id": "a825f7de-98f1-4f2f-921b-79eaf71df453",
+        "project_id": PROJECT_ID,
     }
     try:
         response = requests.post(
