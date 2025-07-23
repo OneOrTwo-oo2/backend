@@ -170,7 +170,7 @@ def classify_clip(image_path, keep, all_boxes, all_crops):
         print(f"[BLOCKLIST 체크] label: {cls_label}, conf: {cls_conf:.3f}, BLOCKLIST: {cls_label in BLOCKLIST}")
 
         # BLOCKLIST 조건부 필터링: 블록리스트 라벨은 conf 0.9 이상일 때만 허용
-        if cls_label in BLOCKLIST and cls_conf < 0.9:
+        if cls_label in BLOCKLIST and cls_conf < 0.7:
             continue
         if cls_conf < CLS_CONF_THRESHOLD:
             continue
