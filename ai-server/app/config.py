@@ -16,5 +16,5 @@ WATSONX_URL = os.getenv("WATSONX_URL")
 
 # vector_db 사전 저장
 vector_db_disease = None
-vector_db_recipe = None
-embedding_model = None
+# vector_db_recipe = None
+# embedding_model = None

@@ -207,7 +207,8 @@ pip-selfcheck.json
 *.pt
 *.pth
 *.csv
+*.json
 
 k8s/
 
-.vscode
+.vscodea
