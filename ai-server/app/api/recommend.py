@@ -70,7 +70,7 @@ async def recommend_recipe(req: RecipeRequest):
     vectordb_disease = config.vector_db_disease
     #model = config.embedding_model
     bm25_retriever = config.bm25_retriever
-    faiss_loaded = config.faiss_loaded     
+    #faiss_loaded = config.faiss_loaded     
 
     ingredients_raw = req.ingredients or []
     diseases = req.diseases or []
@@ -112,7 +112,7 @@ async def recommend_recipe(req: RecipeRequest):
     if kind:
         filters["종류"] = kind
 
-    top_k = 50
+    top_k = 30
     start = time.time()
     # filtered_recipes = search_recipe_with_filters(
     #    query=ingredients,
@@ -126,6 +126,17 @@ async def recommend_recipe(req: RecipeRequest):
         filters=filters,
         top_k=top_k
     )
+
+    #     # filtered_recipes를 딕셔너리 리스트로 생성
+    # filtered_recipes = []
+    # for i, (doc, _) in enumerate(results):
+    #     meta = doc.metadata
+    #     filtered_recipes.append({
+    #         "id": i+1,
+    #         "제목": meta.get("제목", ""),
+    #         "재료": [ing.strip() for ing in meta.get("재료", "").split(",") if ing.strip()],
+    #         "URL": meta.get("URL", "")
+    #     })
 
     print(f"🔍 유사 레시피 {top_k}개 검색 완료 (소요: {time.time() - start:.2f}초)")
     print(f"🔍 유사 레시피: {filtered_recipes[:20]}")

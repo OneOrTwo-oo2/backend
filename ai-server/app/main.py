@@ -1,7 +1,7 @@
 import config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from utils.langchain import load_vector_db_disease, load_bm25_retriever, load_faiss_vectorstore  #load_vector_db_recipe
+from utils.langchain import load_vector_db_disease, load_bm25_retriever   # load_faiss_vectorstore  #load_vector_db_recipe
 from utils.watsonx import get_valid_access_token
 from api.router import router
 
@@ -15,7 +15,7 @@ def on_startup():
     # load vector_db before starting server
     config.vector_db_disease = load_vector_db_disease()
     config.bm25_retriever = load_bm25_retriever()
-    config.faiss_loaded = load_faiss_vectorstore()
+    #config.faiss_loaded = load_faiss_vectorstore()
 
 # ✅ CORS 설정
 app.add_middleware(

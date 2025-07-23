@@ -20,7 +20,7 @@ def load_vector_db_disease():
 # BM25 리트리버 로드
 def load_bm25_retriever():
     #bm25_document 로드
-    with open("vector_store/recipe/bm25_documents.json", "r", encoding="utf-8") as f:
+    with open("vector_store/recipe/bm25_documents_v3.json", "r", encoding="utf-8") as f:
         loaded_data = json.load(f)
 
     # 다시 Document 리스트로 변환
