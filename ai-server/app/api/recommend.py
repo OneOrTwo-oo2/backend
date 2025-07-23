@@ -37,7 +37,7 @@ def fetch_thumbnail_by_title(title: str) -> dict:
             )
         }
 
-        response = requests.get(url, headers=headers, timeout=5)
+        response = requests.get(url, headers=headers, timeout=20)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
@@ -112,7 +112,7 @@ async def recommend_recipe(req: RecipeRequest):
     if kind:
         filters["종류"] = kind
 
-    top_k = 50
+    top_k = 30
     start = time.time()
     # filtered_recipes = search_recipe_with_filters(
     #    query=ingredients,

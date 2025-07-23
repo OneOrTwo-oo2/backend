@@ -3,6 +3,7 @@ import requests
 import re
 import json
 import time
+from config import WATSONX_URL
 
 # 전역 변수로 토큰과 만료 시간 관리
 _access_token = None
@@ -22,7 +23,7 @@ def get_ibm_access_token(api_key: str) -> str:
             "grant_type": "urn:ibm:params:oauth:grant-type:apikey",
             "apikey": api_key
         },
-        verify=False  # 운영시에는 True or 생략 SSL 인증서 경고 무시하는격
+        verify=True  # 운영시에는 True or 생략 SSL 인증서 경고 무시하는격
     )
     response.raise_for_status()
     token_data = response.json()
@@ -62,8 +63,7 @@ def get_valid_access_token() -> str:
 #     return response.text
 
 def ask_watsonx(prompt: str) -> str:
-    #url = config.WATSONX_URL
-    url = "https://us-south.ml.cloud.ibm.com/ml/v1/text/generation?version=2023-05-29"
+    url = WATSONX_URL
     headers = {
         "Authorization": f"Bearer {get_valid_access_token()}",
         "Content-Type": "application/json",
@@ -80,59 +80,25 @@ def ask_watsonx(prompt: str) -> str:
             "top_p": 1,
             "repetition_penalty": 1.1
         },
-        #"model_id": "meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
         "model_id":"meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
-        #"project_id": "a825f7de-98f1-4f2f-921b-79eaf71df453",
-	    "project_id": "a825f7de-98f1-4f2f-921b-79eaf71df453",
-    #     "moderations": {
-	# 	"hap": {
-	# 		"input": {
-	# 			"enabled": True,
-	# 			"threshold": 0.5,
-	# 			"mask": {
-	# 				"remove_entity_value": True
-	# 			}
-	# 		},
-	# 		"output": {
-	# 			"enabled": True,
-	# 			"threshold": 0.5,
-	# 			"mask": {
-	# 				"remove_entity_value": True
-	# 			}
-	# 		}
-	# 	},
-	# 	"pii": {
-	# 		"input": {
-	# 			"enabled": True,
-	# 			"threshold": 0.5,
-	# 			"mask": {
-	# 				"remove_entity_value": True
-	# 			}
-	# 		},
-	# 		"output": {
-	# 			"enabled": True,
-	# 			"threshold": 0.5,
-	# 			"mask": {
-	# 				"remove_entity_value": True
-	# 			}
-	# 		}
-	# 	},
-	# 	"granite_guardian": {
-	# 		"input": {
-	# 			"threshold": 1
-	# 		}
-	# 	}
-	# }
-}
+        "project_id": "a825f7de-98f1-4f2f-921b-79eaf71df453",
+    }
+    try:
+        response = requests.post(
+            url, 
+            headers=headers, 
+            json=body,
+            timeout=30)
+        if response.status_code != 200:
+            raise Exception("Non-200 response: " + str(response.text))
+        return response.text
+    except requests.Timeout:
+        print("❌ WatsonX API 타임아웃!")
+        return '{"error": "timeout"}'
+    except Exception as e:
+        print(f"❌ WatsonX API 에러: {e}")
+        return '{"error": "exception"}'
     
-    response = requests.post(
-        url, 
-        headers=headers, 
-        json=body)
-    if response.status_code != 200:
-        raise Exception("Non-200 response: " + str(response.text))
-
-    return response.text
 
 
 # def parse_watsonx_json(response_text: str) -> dict:
