@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from utils.langchain import load_vector_db_disease, load_vector_db_recipe
 from utils.watsonx import get_valid_access_token
 from api.router import router
+from image_model.classifier import get_clip_model
 
 app = FastAPI()
 app.include_router(router)
@@ -15,7 +16,8 @@ def on_startup():
     # load vector_db before starting server
     config.vector_db_disease = load_vector_db_disease()
     config.embedding_model, config.vector_db_recipe = load_vector_db_recipe()
-
+    config.clip_model, config.preprocess, config.tokenizer = get_clip_model()
+    
 # ✅ CORS 설정
 app.add_middleware(
     CORSMiddleware,

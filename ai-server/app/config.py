@@ -18,3 +18,8 @@ WATSONX_URL = os.getenv("WATSONX_URL")
 vector_db_disease = None
 vector_db_recipe = None
 embedding_model = None
+
+# 이미지 모델 사전 저장
+clip_model = None
+preprocess = None
+tokenizer = None

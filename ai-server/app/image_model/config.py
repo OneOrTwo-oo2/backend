@@ -180,7 +180,7 @@ WHITELIST_MAP = {
 }
 
 # 예외처리 labels
-BLOCKLIST = {"bowl", "spoon", "fork", "knife", "dining table", "plate","Baguette","pork_neck","sausage","hoisin_sauce","chicken_wing","scallop","mayonnaise","whipping_cream","coffee","banana"}
+BLOCKLIST = {"bowl", "spoon", "fork", "knife", "dining table", "plate","Baguette","pork_neck","sausage","hoisin_sauce","chicken_wing","scallop","mayonnaise","whipping_cream","coffee","banana","zucchini"}
 
 
 
