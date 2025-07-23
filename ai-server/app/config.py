@@ -23,3 +23,7 @@ embedding_model = None
 clip_model = None
 preprocess = None
 tokenizer = None
+
+# vector_db_recipe = None
+# embedding_model = None
+

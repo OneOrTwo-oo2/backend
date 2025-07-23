@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from utils.youtube import search_youtube_videos
-from utils.prompt import build_prompt, format_recipe, search_top_k, print_watsonx_response
+from utils.prompt import build_prompt, search_bm25_only, print_watsonx_response    #search_recipe_with_filters
 import config
 import time
 from utils.watsonx import ask_watsonx, parse_watsonx_json
@@ -66,9 +66,11 @@ def fetch_thumbnail_by_title(title: str) -> dict:
 # ✅ 기존 요약 + 유튜브
 @router.post("/recommend")
 async def recommend_recipe(req: RecipeRequest):
-    vectordb_recipe = config.vector_db_recipe
+    #vectordb_recipe = config.vector_db_recipe
     vectordb_disease = config.vector_db_disease
-    model = config.embedding_model
+    #model = config.embedding_model
+    bm25_retriever = config.bm25_retriever
+    faiss_loaded = config.faiss_loaded     
 
     ingredients_raw = req.ingredients or []
     diseases = req.diseases or []
@@ -102,28 +104,29 @@ async def recommend_recipe(req: RecipeRequest):
     print(f"🥗 종류: {kind}")
     print(f"🥗 난이도: {level}")
 
-    # ✅ 유사 레시피 검색 (쿼리용 문자열 재조합, Top 50)
-    top_k = 100
-    start = time.time()
-    results = search_top_k(query = ingredients,
-                           vectordb=vectordb_recipe,
-                            model=model, 
-                            top_k=top_k,
-                            exclude_ingredients=allergies,
-                            level=level,
-                            kind=kind
-                            )
+    # ✅ 후보 레시피 검색 (쿼리용 문자열 재조합, Top 50)
+    # 필터 생성 (빈 값은 제외)
+    filters = {}
+    if level:
+        filters["난이도"] = level
+    if kind:
+        filters["종류"] = kind
 
-    # filtered_recipes를 딕셔너리 리스트로 생성
-    filtered_recipes = []
-    for i, (doc, _) in enumerate(results):
-        meta = doc.metadata
-        filtered_recipes.append({
-            "id": i+1,
-            "제목": meta.get("제목", ""),
-            "재료": [ing.strip() for ing in meta.get("재료", "").split(",") if ing.strip()],
-            "URL": meta.get("URL", "")
-        })
+    top_k = 50
+    start = time.time()
+    # filtered_recipes = search_recipe_with_filters(
+    #    query=ingredients,
+    #    bm25_retriever=bm25_retriever,
+    #    faiss_loaded=faiss_loaded,
+    #    filters=filters,
+    #    top_k=top_k)
+    filtered_recipes = search_bm25_only(
+        query=ingredients,
+        bm25_retriever=bm25_retriever,
+        filters=filters,
+        top_k=top_k
+    )
+
     print(f"🔍 유사 레시피 {top_k}개 검색 완료 (소요: {time.time() - start:.2f}초)")
     print(f"🔍 유사 레시피: {filtered_recipes[:20]}")
     context = ""
