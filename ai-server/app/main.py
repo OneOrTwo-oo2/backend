@@ -15,7 +15,6 @@ def on_startup():
     get_valid_access_token()
     # load vector_db before starting server
     config.vector_db_disease = load_vector_db_disease()
-    config.embedding_model, config.vector_db_recipe = load_vector_db_recipe()
     config.clip_model, config.preprocess, config.tokenizer = get_clip_model()
     config.bm25_retriever = load_bm25_retriever()
     config.faiss_loaded = load_faiss_vectorstore()
