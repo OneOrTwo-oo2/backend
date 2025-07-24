@@ -7,12 +7,11 @@ import open_clip
 from PIL import ImageFont, ImageDraw, Image
 import numpy as np
 from torchvision import transforms
+import config
 
 
 # 파일 상단(최초 1회만 로딩)
-clip_model = None
-preprocess = None
-tokenizer = None
+
 
 def draw_labeled_box(image: np.ndarray, bbox: list[int], label: str, color=COLOR, font_size=12):
     """
@@ -104,10 +103,9 @@ def load_finetuned_clip(model_path, device="cuda"):
 
 
 def get_clip_model():
-    global clip_model, preprocess, tokenizer
-    if clip_model is None:
-        model_path = os.path.join(PRETRAINED_FOLDER, "clip", CLIP_PRETRAINED)
-        clip_model, preprocess, tokenizer = load_finetuned_clip(model_path, device="cuda")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model_path = os.path.join(PRETRAINED_FOLDER, "clip", CLIP_PRETRAINED)
+    clip_model, preprocess, tokenizer = load_finetuned_clip(model_path, device=device)
     return clip_model, preprocess, tokenizer
 
 
@@ -119,13 +117,10 @@ def classify_clip(image_path, keep, all_boxes, all_crops):
     detections = []
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # --- 1. YOLO 박스 검출 이후 ~ CLIP 모델 로딩 시작 ---
-    t0 = time.time()
-    clip_model, preprocess, tokenizer = get_clip_model()
-    t1 = time.time()
-    print(f"[TIME] CLIP 모델 로딩: {t1-t0:.3f}초")
-
+    clip_model, preprocess, tokenizer = config.clip_model, config.preprocess, config.tokenizer
+    
     # --- 2. 텍스트 임베딩 생성 ---
+    t1 = time.time()
     text_prompts = [f"A photo of {label.replace('_', ' ')}" for label in CLASS_LABELS]
     text_tokens = tokenizer(text_prompts).to(device)
     with torch.no_grad():
@@ -170,7 +165,7 @@ def classify_clip(image_path, keep, all_boxes, all_crops):
         print(f"[BLOCKLIST 체크] label: {cls_label}, conf: {cls_conf:.3f}, BLOCKLIST: {cls_label in BLOCKLIST}")
 
         # BLOCKLIST 조건부 필터링: 블록리스트 라벨은 conf 0.9 이상일 때만 허용
-        if cls_label in BLOCKLIST and cls_conf < 0.9:
+        if cls_label in BLOCKLIST and cls_conf < 0.7:
             continue
         if cls_conf < CLS_CONF_THRESHOLD:
             continue

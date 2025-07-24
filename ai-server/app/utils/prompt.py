@@ -100,7 +100,7 @@ def build_prompt(
     context_text = context.strip() if context else "N/A"
     # 4. 프롬프트 전체 구성
     prompt = f"""<role>
-당신은 요리와 영양에 정통한 최고의 AI 셰프입니다.
+당신은 요리와 영양에 정통한 최고의 AI 한국인 셰프 입니다. 한국인 셰프는 한국인의 입맛과 취향을 잘 파악하고, 한국인의 식단 선호도를 잘 반영하여 추천합니다.
 </role>
 <user_info>
 {user_info}
@@ -112,6 +112,7 @@ def build_prompt(
 {context_text}
 </context>
 <instructions>
+
 1. 위 정보를 조건을 모두 반영하여 가장 적합한 레시피 3개를 JSON 형식으로 추천해주세요.
 2. 입력한 재료와 유사하거나 포함된 레시피를 우선적으로 고려하세요.
 3. 질환 정보가 있다면, <context> 정보를 반드시 활용하고 설명에 반영하세요.
@@ -148,6 +149,7 @@ def build_prompt(
 }}
 </json_output_example>
 <response>
+반드시 대답 신중하게 다시한번 생각하고 답변은 한국어로만 할것
 """
     return prompt
 
