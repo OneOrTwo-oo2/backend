@@ -62,9 +62,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Create .env file
-        run: echo "${{ secrets.API_ENV_FILE }}" > api-server/.env
-
       - name: Login to ECR
         run: |
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
@@ -89,9 +86,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Create .env file
-        run: echo "${{ secrets.AI_ENV_FILE }}" > ai-server/.env
 
       - name: Login to ECR
         run: |
