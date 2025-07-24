@@ -63,7 +63,7 @@ def get_valid_access_token() -> str:
 #     return response.text
 
 def ask_watsonx(prompt: str) -> str:
-    url = WATSONX_URL
+    url = WATSONX_URL + "/models/meta-llama/llama-4-maverick-17b-128e-instruct-fp8/generate"
     headers = {
         "Authorization": f"Bearer {get_valid_access_token()}",
         "Content-Type": "application/json",
