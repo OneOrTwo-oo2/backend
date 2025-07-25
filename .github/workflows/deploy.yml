@@ -1,12 +1,12 @@
-name: Deploy backend images to ECR
+name: Deploy backend images to ECR and update ArgoCD manifests
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'ai-server/**'
       - 'api-server/**'
+      - 'ai-server/**'
       - '.github/workflows/deploy.yml'
 
 jobs:
@@ -29,11 +29,8 @@ jobs:
         run: |
           BEFORE=${{ steps.prev.outputs.before_sha }}
           AFTER=$(git rev-parse HEAD)
-
           echo "🔍 Compare: $BEFORE → $AFTER"
           CHANGED_FILES=$(git diff --name-only $BEFORE $AFTER)
-
-          echo "Changed files:"
           echo "$CHANGED_FILES"
 
           API_CHANGED=$(echo "$CHANGED_FILES" | grep -q '^api-server/' && echo "true" || echo "false")
@@ -55,6 +52,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Get short SHA
+        id: vars
+        run: echo "sha_short=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -62,16 +63,34 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Login to ECR
+      - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
           | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
 
       - name: Build & Push API Image
         run: |
-          IMAGE=${{ secrets.ECR_REGISTRY }}/recipego-api:latest
+          IMAGE=${{ secrets.ECR_REGISTRY }}/recipego-api:${{ steps.vars.outputs.sha_short }}
           docker build -t $IMAGE ./api-server
           docker push $IMAGE
+
+      - name: Clone ArgoCD repo
+        run: |
+          git clone https://x-access-token:${{ secrets.ARGOCD_PUSH_TOKEN }}@github.com/OneOrTwo-oo2/argocd.git
+          cd argocd
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+      - name: Update API image tag
+        run: |
+          sed -i "s|image: .*/recipego-api:.*|image: ${{ secrets.ECR_REGISTRY }}/recipego-api:${{ steps.vars.outputs.sha_short }}|" argocd/k8s/api/backend-deployment.yaml
+
+      - name: Commit & Push
+        run: |
+          cd argocd
+          git add .
+          git commit -m "🔄 Update API image tag to ${{ steps.vars.outputs.sha_short }}"
+          git push origin main
 
   deploy-ai:
     needs: detect-changes
@@ -80,6 +99,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Get short SHA
+        id: vars
+        run: echo "sha_short=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -87,13 +110,31 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Login to ECR
+      - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
           | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
 
       - name: Build & Push AI Image
         run: |
-          IMAGE=${{ secrets.ECR_REGISTRY }}/recipego-ai:latest
+          IMAGE=${{ secrets.ECR_REGISTRY }}/recipego-ai:${{ steps.vars.outputs.sha_short }}
           docker build -t $IMAGE ./ai-server
           docker push $IMAGE
+
+      - name: Clone ArgoCD repo
+        run: |
+          git clone https://x-access-token:${{ secrets.ARGOCD_PUSH_TOKEN }}@github.com/OneOrTwo-oo2/argocd.git
+          cd argocd
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+      - name: Update AI image tag
+        run: |
+          sed -i "s|image: .*/recipego-ai:.*|image: ${{ secrets.ECR_REGISTRY }}/recipego-ai:${{ steps.vars.outputs.sha_short }}|" argocd/k8s/ai/ai-deployment.yaml
+
+      - name: Commit & Push
+        run: |
+          cd argocd
+          git add .
+          git commit -m "🔄 Update AI image tag to ${{ steps.vars.outputs.sha_short }}"
+          git push origin main
