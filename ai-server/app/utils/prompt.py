@@ -63,17 +63,11 @@ def search_recipe_with_filters(query, bm25_retriever, faiss_loaded, filters: dic
 
 
 def search_bm25_only(query, bm25_retriever, filters: dict = None, top_k: int = 10):
-    # 쿼리가 리스트라면 문자열로 변환
-    if isinstance(query, list):
-        query = " ".join(query)
-
     # BM25 검색
     results = bm25_retriever.get_relevant_documents(" ".join(query))
-
     # 필터링
     if filters:
         results = bm25_filter(results, filters)
-
     # 출력
     for i, doc in enumerate(results[:top_k]):
         print(f"\n📌 Top {i+1}")
@@ -81,7 +75,6 @@ def search_bm25_only(query, bm25_retriever, filters: dict = None, top_k: int = 1
         print("-" * 60)
 
     return results[:top_k]
-
 
 def build_prompt(
     ingredients,
