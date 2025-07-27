@@ -112,7 +112,7 @@ async def recommend_recipe(req: RecipeRequest):
     if kind:
         filters["종류"] = kind
 
-    top_k = 30
+    top_k = 50
     start = time.time()
     # filtered_recipes = search_recipe_with_filters(
     #    query=ingredients,
