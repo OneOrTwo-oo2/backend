@@ -23,11 +23,16 @@ class PreferenceIn(BaseModel):
     diseases: List[str] = []
 
 # 북마크 생성
+
 class BookmarkCreate(BaseModel):
     title: str
     image: str
     summary: Optional[str] = ""
     link: str
+    is_ai_generated: Optional[bool] = False
+    recommendation_reason: Optional[str] = None  # ✅ 추가
+    dietary_tips: Optional[str] = None           # ✅ 추가
+    custom_title: Optional[str] = None  # ✅ 추가
 
 
 # 북마크 응답 (레시피 정보 포함)
@@ -37,6 +42,10 @@ class BookmarkOut(BaseModel):
     image: str
     summary: Optional[str]
     link: str
+    is_ai_generated: bool
+    recommendation_reason: Optional[str] = ""
+    dietary_tips: Optional[str] = ""
+    custom_title: Optional[str] = None  # ✅ 추가
 
     class Config:
         orm_mode = True
@@ -59,14 +68,3 @@ class FolderOut(BaseModel):
 class FolderRecipeAdd(BaseModel):
     recipe_id: int
 
-
-# 레시피 응답 (bookmarks에서 재사용 가능)
-class RecipeOut(BaseModel):
-    id: int
-    title: str
-    image: str
-    summary: Optional[str]
-    link: str
-
-    class Config:
-        orm_mode = True

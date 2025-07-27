@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from db.models import BookmarkFolder, FolderRecipe, Recipe, User
+from sqlalchemy.orm import Session, joinedload
+from db.models import BookmarkFolder, FolderRecipe, Recipe, User, Bookmark
 from db.connection import get_db
 from utils.jwt_handler import get_current_user_from_cookie
-from db.schemas import FolderCreate, FolderOut, FolderRecipeAdd, RecipeOut
+from db.schemas import FolderCreate, FolderOut, FolderRecipeAdd
 from typing import List
-
+from fastapi.responses import JSONResponse
 router = APIRouter()
 
 
@@ -51,7 +51,7 @@ def add_recipe_to_folder(
     return {"message": "레시피가 폴더에 추가되었습니다."}
 
 
-@router.get("/folders/{folder_id}/recipes", response_model=List[RecipeOut])
+@router.get("/folders/{folder_id}/recipes")
 def get_folder_recipes(
     folder_id: int,
     db: Session = Depends(get_db),
@@ -61,13 +61,40 @@ def get_folder_recipes(
     if not folder:
         raise HTTPException(status_code=404, detail="폴더를 찾을 수 없습니다.")
 
-    recipes = (
-        db.query(Recipe)
-        .join(FolderRecipe, FolderRecipe.recipe_id == Recipe.id)
+    # 🔥 Bookmark를 조인하여 custom_title 포함
+    folder_recipes = (
+        db.query(FolderRecipe)
+        .join(Recipe, FolderRecipe.recipe_id == Recipe.id)
+        .join(Bookmark, (Bookmark.recipe_id == Recipe.id) & (Bookmark.user_id == user.user_id))  # ✅ 북마크와 조인
         .filter(FolderRecipe.folder_id == folder_id)
+        .with_entities(
+            Recipe.id,
+            Recipe.image,
+            Recipe.link,
+            Recipe.summary,
+            Recipe.is_ai_generated,
+            Recipe.recommendation_reason,
+            Recipe.dietary_tips,
+            Bookmark.custom_title,
+            Recipe.title  # 원래 제목도 백업용으로
+        )
         .all()
     )
-    return recipes
+
+    result = []
+    for row in folder_recipes:
+        result.append({
+            "id": row.id,
+            "title": row.custom_title or row.title,  # ✅ 사용자 제목 우선
+            "image": row.image,
+            "summary": row.summary,
+            "link": row.link,
+            "is_ai_generated": bool(row.is_ai_generated),
+            "recommendation_reason": row.recommendation_reason or "",
+            "dietary_tips": row.dietary_tips or ""
+        })
+
+    return JSONResponse(content=result)
 
 
 @router.delete("/folders/{folder_id}/recipes/{recipe_id}")
