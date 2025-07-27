@@ -9,7 +9,7 @@ from db.schemas import BookmarkCreate, BookmarkOut
 router = APIRouter()
 
 
-# ✅ 북마크 생성 (레시피까지 저장)
+# ✅ 북마크 생성 (레시피까지 저장) !!
 @router.post("/bookmark-with-recipe")
 def add_bookmark_with_recipe(
     data: BookmarkCreate,
