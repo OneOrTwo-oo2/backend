@@ -127,19 +127,8 @@ async def recommend_recipe(req: RecipeRequest):
         top_k=top_k
     )
 
-    #     # filtered_recipes를 딕셔너리 리스트로 생성
-    # filtered_recipes = []
-    # for i, (doc, _) in enumerate(results):
-    #     meta = doc.metadata
-    #     filtered_recipes.append({
-    #         "id": i+1,
-    #         "제목": meta.get("제목", ""),
-    #         "재료": [ing.strip() for ing in meta.get("재료", "").split(",") if ing.strip()],
-    #         "URL": meta.get("URL", "")
-    #     })
-
-    print(f"🔍 유사 레시피 {top_k}개 검색 완료 (소요: {time.time() - start:.2f}초)")
-    print(f"🔍 유사 레시피: {filtered_recipes[:20]}")
+    print(f"🔍 유사 레시피 {len(filtered_recipes)}개 검색 완료 (소요: {time.time() - start:.2f}초)")
+    print(f"🔍 검색된 레시피 수: {len(filtered_recipes)}개")
     context = ""
 
     # ✅ 관련 disease context 추출
