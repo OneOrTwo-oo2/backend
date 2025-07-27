@@ -68,16 +68,22 @@ class Recipe(Base):
     image = Column(String(500))
     summary = Column(String(1000))
     link = Column(String(255), unique=True)
+    recommendation_reason = Column(String(1000), nullable=True)
+    dietary_tips = Column(String(1000), nullable=True) 
+    is_ai_generated = Column(Integer, default=0)  # ✅ 추가
 
     bookmarks = relationship("Bookmark", back_populates="recipe", cascade="all, delete")
     folder_recipes = relationship("FolderRecipe", back_populates="recipe", cascade="all, delete")
 
+
 # 북마크
 class Bookmark(Base):
     __tablename__ = "bookmarks"
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("User.user_id", ondelete="CASCADE"))
     recipe_id = Column(Integer, ForeignKey("recipes.id", ondelete="CASCADE"))
+    custom_title = Column(String(255), nullable=True)  # ✅ 사용자 지정 제목 필드 추가
 
     user = relationship("User", back_populates="bookmarks")
     recipe = relationship("Recipe", back_populates="bookmarks")
