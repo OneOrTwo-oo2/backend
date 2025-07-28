@@ -67,17 +67,18 @@ def detect_ingredient(image_path):
 def delete_file_after_delay(file_path, delay_seconds=10):
     """지정된 시간 후에 파일을 삭제하는 함수"""
     def delete_file():
+        print(f"⏰ {delay_seconds}초 후 파일 삭제 예약: {file_path}")
         time.sleep(delay_seconds)
         try:
             if os.path.exists(file_path):
                 os.remove(file_path)
-                print(f"파일 삭제 완료: {file_path}")
+                print(f"✅ 파일 삭제 완료: {file_path}")
             else:
-                print(f"파일이 이미 삭제됨: {file_path}")
+                print(f"⚠️ 파일이 이미 삭제됨: {file_path}")
         except Exception as e:
-            print(f"파일 삭제 실패: {file_path}, 오류: {e}")
+            print(f"❌ 파일 삭제 실패: {file_path}, 오류: {e}")
     
-    # 별도 스레드에서 삭제 실행
     thread = threading.Thread(target=delete_file)
     thread.daemon = True
     thread.start()
+    print(f"🔄 파일 삭제 스레드 시작: {file_path}")
