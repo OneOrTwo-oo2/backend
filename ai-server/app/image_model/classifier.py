@@ -192,6 +192,96 @@ def classify_clip(image_path, keep, all_boxes, all_crops):
     return detections, image
 
 
+def classify_clip_filtered_bbox(image_path, keep, all_boxes, all_crops, confidence_threshold=0.7):
+    """CLIP 모델을 이용한 자유 라벨 기반 분류 (정확도 70% 미만만 bounding box 표시)"""
+    import time
+    image = cv2.imread(image_path)
+    detections = []
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    clip_model, preprocess, tokenizer = config.clip_model, config.preprocess, config.tokenizer
+    
+    # --- 2. 텍스트 임베딩 생성 ---
+    t1 = time.time()
+    text_prompts = [f"A photo of {label.replace('_', ' ')}" for label in CLASS_LABELS]
+    text_tokens = tokenizer(text_prompts).to(device)
+    with torch.no_grad():
+        text_features = clip_model.encode_text(text_tokens)
+        text_features /= text_features.norm(dim=-1, keepdim=True)
+    t2 = time.time()
+    print(f"[TIME] 텍스트 임베딩 생성: {t2-t1:.3f}초")
+
+    # --- 3. crop별 루프 시작 전 ---
+    t3 = time.time()
+    print(f"[TIME] crop별 분류 루프 진입: {t3-t2:.3f}초")
+
+    # --- 전체 타이머 시작 ---
+    start_time = time.time()
+
+    for i, box_idx in enumerate(keep):
+        crop_start = time.time()
+        idx = int(box_idx.item()) if isinstance(box_idx, torch.Tensor) else int(box_idx)
+        x1, y1, x2, y2 = map(int, all_boxes[idx])
+        crop = all_crops[idx]
+
+        crop_pil = Image.fromarray(cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
+        crop_input = preprocess(crop_pil).unsqueeze(0).to(device)
+
+        with torch.no_grad():
+            image_feature = clip_model.encode_image(crop_input)
+            image_feature /= image_feature.norm(dim=-1, keepdim=True)
+            similarity = (100.0 * image_feature @ text_features.T).softmax(dim=-1)
+
+        cls_id = int(similarity.argmax().item())
+        cls_label = CLASS_LABELS[cls_id]
+        cls_conf = float(similarity[0, cls_id])
+
+        # WHITELIST_MAP 표준화 적용
+        from image_model.config import WHITELIST_MAP
+        if cls_label in WHITELIST_MAP:
+            std_label = WHITELIST_MAP[cls_label]
+            print(f"[WHITELIST 표준화] {cls_label} → {std_label}")
+            cls_label = std_label
+
+        # BLOCKLIST 체크 프린트
+        print(f"[BLOCKLIST 체크] label: {cls_label}, conf: {cls_conf:.3f}, BLOCKLIST: {cls_label in BLOCKLIST}")
+
+        # BLOCKLIST 조건부 필터링: 블록리스트 라벨은 conf 0.9 이상일 때만 허용
+        if cls_label in BLOCKLIST and cls_conf < 0.7:
+            continue
+        if cls_conf < CLS_CONF_THRESHOLD:
+            continue
+
+        # 정확도 70% 미만이고 18% 이상인 경우에만 bounding box 그리기
+        if cls_conf < confidence_threshold and cls_conf >= 0.18:
+            # 정확도에 따른 색상 결정
+            if cls_conf >= 0.3:
+                color = (0, 165, 255)  # 주황색 (30-70%)
+            else:
+                color = (0, 0, 255)    # 빨간색 (18-30%)
+            
+            # box 및 label 이미지에 표시 (색상 지정)
+            image = draw_labeled_box(image=image, bbox=[x1,y1,x2,y2], label=cls_label, color=color)
+
+        detections.append({
+            "label": cls_label,
+            "korean": cls_label,
+            "category": 'clip',
+            "conf": round(cls_conf, 3),
+            "bbox": [x1, y1, x2, y2]
+        })
+        # CLIP 결과 프린트
+        print(f"[CLIP 결과] label: {cls_label}, conf: {cls_conf:.3f}, bbox: {[x1, y1, x2, y2]}")
+        crop_elapsed = time.time() - crop_start
+        print(f"[CLIP 분류] crop {i+1}/{len(keep)}: {crop_elapsed:.3f}초")
+
+    # --- 전체 타이머 끝 ---
+    elapsed = time.time() - start_time
+    print(f"[CLIP 분류 소요 시간] {elapsed:.3f}초 (YOLO 박스 이후 ~ CLIP 분류 전체)")
+
+    return detections, image
+
+
 def classify_resnet(image_path, keep, all_boxes, all_crops):
     # read img
     image = cv2.imread(image_path)
