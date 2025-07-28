@@ -278,6 +278,18 @@ def classify_clip_filtered_bbox(image_path, keep, all_boxes, all_crops, confiden
     # --- 전체 타이머 끝 ---
     elapsed = time.time() - start_time
     print(f"[CLIP 분류 소요 시간] {elapsed:.3f}초 (YOLO 박스 이후 ~ CLIP 분류 전체)")
+    
+    # bounding box 그리기 결과 요약
+    bbox_drawn_count = 0
+    for detection in detections:
+        if detection['conf'] < confidence_threshold and detection['conf'] >= 0.18:
+            bbox_drawn_count += 1
+    
+    print(f"[BOUNDING BOX 요약] 전체 detections: {len(detections)}, bounding box 그려진 개수: {bbox_drawn_count}")
+    print(f"[BOUNDING BOX 요약] confidence_threshold: {confidence_threshold}, 최소 임계값: 0.18")
+    
+    if bbox_drawn_count == 0:
+        print(f"⚠️ [BOUNDING BOX 경고] 그려진 bounding box가 없습니다. 이미지가 원본과 동일할 수 있습니다.")
 
     return detections, image
 

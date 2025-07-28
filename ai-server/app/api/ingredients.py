@@ -47,12 +47,20 @@ async def get_ingredients(file: UploadFile = File(...)):
 
     # bounding box 이미지도 응답 후 삭제 (10초 후)
     if bbox_save_path and os.path.exists(bbox_save_path):
+        print(f"🗑️ Bounding box 이미지 삭제 예약: {bbox_save_path}")
         delete_file_after_delay(bbox_save_path, delay_seconds=10)
+    else:
+        print(f"⚠️ Bounding box 이미지 경로가 없거나 파일이 존재하지 않음: {bbox_save_path}")
 
-    return JSONResponse(content={
+    response_data = {
         "filename": file.filename,
         "saved_path": save_path,
         "ingredients": ingredients_with_confidence,
         "bbox_image_url": bbox_image_url,
         "content_type": file.content_type
-    })
+    }
+    
+    print(f"📤 응답 데이터 - bbox_image_url: {bbox_image_url}")
+    print(f"📤 응답 데이터 - ingredients 개수: {len(ingredients_with_confidence)}")
+    
+    return JSONResponse(content=response_data)

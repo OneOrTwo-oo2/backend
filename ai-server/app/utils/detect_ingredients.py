@@ -41,22 +41,25 @@ def detect_ingredient(image_path):
     bbox_image_url = None
     bbox_save_path = None
     if result_img is not None and len(detections) > 0:
-        # 결과 이미지 저장 폴더 생성
+        print(f"🖼️ Bounding box 이미지 저장 시작 - detections 개수: {len(detections)}")
         results_dir = "static/results"
         os.makedirs(results_dir, exist_ok=True)
         
-        # 고유한 파일명 생성
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         unique_id = str(uuid.uuid4())[:8]
         filename = f"bbox_result_{timestamp}_{unique_id}.jpg"
         bbox_save_path = os.path.join(results_dir, filename)
         
-        # bounding box 이미지 저장
         import cv2
         success = cv2.imwrite(bbox_save_path, result_img)
         if success:
             bbox_image_url = f"/static/results/{filename}"
-            print(f"Bounding box 이미지 저장됨: {bbox_image_url}")
+            print(f"✅ Bounding box 이미지 저장 성공: {bbox_image_url}")
+            print(f"✅ 파일 경로: {bbox_save_path}")
+        else:
+            print(f"❌ Bounding box 이미지 저장 실패: {bbox_save_path}")
+    else:
+        print(f"⚠️ Bounding box 이미지 저장 건너뜀 - result_img: {result_img is not None}, detections: {len(detections) if detections else 0}")
     
     return filtered_ingredients, bbox_image_url, bbox_save_path
 
