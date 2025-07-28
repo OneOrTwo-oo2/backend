@@ -45,12 +45,17 @@ async def get_ingredients(file: UploadFile = File(...)):
     except Exception as e:
         print(f"이미지 삭제 실패: {e}")
 
-    # bounding box 이미지도 응답 후 삭제 (10초 후)
+    # bounding box 이미지도 응답 후 삭제 (60초 후)
     if bbox_save_path and os.path.exists(bbox_save_path):
+        file_size = os.path.getsize(bbox_save_path)
         print(f"🗑️ Bounding box 이미지 삭제 예약: {bbox_save_path}")
-        delete_file_after_delay(bbox_save_path, delay_seconds=10)
+        print(f"📁 파일 크기: {file_size} bytes")
+        delete_file_after_delay(bbox_save_path, delay_seconds=60)
     else:
         print(f"⚠️ Bounding box 이미지 경로가 없거나 파일이 존재하지 않음: {bbox_save_path}")
+        if bbox_save_path:
+            print(f"🔍 파일 경로 확인: {os.path.exists(bbox_save_path)}")
+            print(f"🔍 디렉토리 존재: {os.path.exists(os.path.dirname(bbox_save_path))}")
 
     response_data = {
         "filename": file.filename,
