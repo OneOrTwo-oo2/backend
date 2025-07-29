@@ -1,9 +1,10 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 import numpy as np
 import cv2
-from utils.detect_ingredients import detect_ingredient
+from utils.detect_ingredients import detect_ingredient, delete_file_after_delay
 
 import os
 UPLOAD_DIR = "uploads"
@@ -11,6 +12,9 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter()
 
+# 정적 파일 서빙을 위한 설정
+results_dir = "static/results"
+os.makedirs(results_dir, exist_ok=True)
 
 @router.post("/ingredients")
 async def get_ingredients(file: UploadFile = File(...)):
@@ -33,7 +37,7 @@ async def get_ingredients(file: UploadFile = File(...)):
     if not success:
         raise HTTPException(status_code=500, detail="이미지 저장 실패")
     
-    ingredients_with_confidence = detect_ingredient(save_path)
+    ingredients_with_confidence, bbox_image_url, bbox_save_path = detect_ingredient(save_path)
 
     # 이미지 분석 후 저장된 파일 삭제
     try:
@@ -41,9 +45,27 @@ async def get_ingredients(file: UploadFile = File(...)):
     except Exception as e:
         print(f"이미지 삭제 실패: {e}")
 
-    return JSONResponse(content={
+    # bounding box 이미지도 응답 후 삭제 (60초 후)
+    if bbox_save_path and os.path.exists(bbox_save_path):
+        file_size = os.path.getsize(bbox_save_path)
+        print(f"🗑️ Bounding box 이미지 삭제 예약: {bbox_save_path}")
+        print(f"📁 파일 크기: {file_size} bytes")
+        delete_file_after_delay(bbox_save_path, delay_seconds=60)
+    else:
+        print(f"⚠️ Bounding box 이미지 경로가 없거나 파일이 존재하지 않음: {bbox_save_path}")
+        if bbox_save_path:
+            print(f"🔍 파일 경로 확인: {os.path.exists(bbox_save_path)}")
+            print(f"🔍 디렉토리 존재: {os.path.exists(os.path.dirname(bbox_save_path))}")
+
+    response_data = {
         "filename": file.filename,
         "saved_path": save_path,
         "ingredients": ingredients_with_confidence,
+        "bbox_image_url": bbox_image_url,
         "content_type": file.content_type
-    })
+    }
+    
+    print(f"📤 응답 데이터 - bbox_image_url: {bbox_image_url}")
+    print(f"📤 응답 데이터 - ingredients 개수: {len(ingredients_with_confidence)}")
+    
+    return JSONResponse(content=response_data)

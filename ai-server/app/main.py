@@ -1,13 +1,20 @@
 import config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from utils.langchain import load_vector_db_disease, load_bm25_retriever   # load_faiss_vectorstore  #load_vector_db_recipe
+from fastapi.staticfiles import StaticFiles
+from utils.langchain import load_vector_db_disease, load_bm25_retriever, load_faiss_vectorstore  #load_vector_db_recipe
 from utils.watsonx import get_valid_access_token
 from api.router import router
 from image_model.classifier import get_clip_model
+import os
 
 app = FastAPI()
 app.include_router(router)
+
+# 정적 파일 서빙 설정 (bounding box 이미지용)
+results_dir = "static/results"
+os.makedirs(results_dir, exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.on_event("startup")
 def on_startup():
