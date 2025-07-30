@@ -223,4 +223,11 @@ EMOJI_MAP = {
 
 def get_korean_name(english_label):
     """영어 라벨을 한글 이름으로 변환"""
-    return EMOJI_MAP.get(english_label, english_label) 
+    return EMOJI_MAP.get(english_label, english_label)
+
+
+def get_english_label(korean_label):
+    """한글 라벨을 영어 라벨로 역변환"""
+    # EMOJI_MAP의 키-값을 뒤집어서 한글→영어 매핑 생성
+    reverse_map = {v: k for k, v in EMOJI_MAP.items()}
+    return reverse_map.get(korean_label, korean_label) 
