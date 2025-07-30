@@ -39,32 +39,26 @@ def detect_ingredient(image_path):
     # 최종 필터링: 너무 낮은 정확도 제거 (18% 미만 제거)
     filtered_ingredients = [item for item in sorted_ingredients if item['confidence'] >= 0.18]
     
-    # bounding box 이미지 저장
-    bbox_image_url = None
-    bbox_save_path = None
+    # bounding box 이미지를 base64로 인코딩
+    bbox_image_base64 = None
     if result_img is not None and len(detections) > 0:
-        print(f"🖼️ Bounding box 이미지 저장 시작 - detections 개수: {len(detections)}")
-        results_dir = "static/results"
-        os.makedirs(results_dir, exist_ok=True)
-        
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        unique_id = str(uuid.uuid4())[:8]
-        filename = f"bbox_result_{timestamp}_{unique_id}.jpg"
-        bbox_save_path = os.path.join(results_dir, filename)
+        print(f"🖼️ Bounding box 이미지 base64 인코딩 시작 - detections 개수: {len(detections)}")
         
         import cv2
-        success = cv2.imwrite(bbox_save_path, result_img)
-        if success:
-            bbox_image_url = f"/static/results/{filename}"
-            print(f"✅ Bounding box 이미지 저장 성공: {bbox_image_url}")
-            print(f"✅ 파일 경로: {bbox_save_path}")
-            print(f"⏰ 프론트엔드 접근 시 5초 후 자동 삭제, 미접근 시 20분 후 정기 정리")
+        import base64
+        
+        # 이미지를 JPEG로 인코딩
+        _, buffer = cv2.imencode('.jpg', result_img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if buffer is not None:
+            # base64로 인코딩
+            bbox_image_base64 = base64.b64encode(buffer).decode('utf-8')
+            print(f"✅ Bounding box 이미지 base64 인코딩 성공 (크기: {len(bbox_image_base64)} chars)")
         else:
-            print(f"❌ Bounding box 이미지 저장 실패: {bbox_save_path}")
+            print(f"❌ Bounding box 이미지 인코딩 실패")
     else:
-        print(f"⚠️ Bounding box 이미지 저장 건너뜀 - result_img: {result_img is not None}, detections: {len(detections) if detections else 0}")
+        print(f"⚠️ Bounding box 이미지 생성 건너뜀 - result_img: {result_img is not None}, detections: {len(detections) if detections else 0}")
     
-    return filtered_ingredients, bbox_image_url, bbox_save_path
+    return filtered_ingredients, bbox_image_base64
 
 
 # 전역 변수로 활성 스레드들을 추적
