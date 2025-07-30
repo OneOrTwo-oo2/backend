@@ -8,7 +8,33 @@ from PIL import ImageFont, ImageDraw, Image
 import numpy as np
 from torchvision import transforms
 import config
-from utils.emoji_mapper import get_korean_name
+from utils.emoji_mapper import get_korean_name, get_english_label
+
+
+def is_korean_text(text):
+    """텍스트가 한글을 포함하는지 확인"""
+    for char in text:
+        if '\uAC00' <= char <= '\uD7AF':  # 한글 유니코드 범위
+            return True
+    return False
+
+
+def find_working_font(font_paths, font_size=12):
+    """작동하는 폰트를 찾는 함수"""
+    for font_path in font_paths:
+        try:
+            if os.path.exists(font_path):
+                font = ImageFont.truetype(font_path, font_size)
+                # 테스트 텍스트로 폰트 검증
+                test_text = "가나다라"
+                bbox = font.getbbox(test_text)
+                if bbox[2] > 0 and bbox[3] > 0:  # 유효한 바운딩 박스
+                    print(f"✅ 폰트 검증 성공: {font_path}")
+                    return font
+        except Exception as e:
+            print(f"⚠️ 폰트 검증 실패: {font_path}, 오류: {e}")
+            continue
+    return None
 
 
 # 파일 상단(최초 1회만 로딩)
@@ -31,12 +57,47 @@ def draw_labeled_box(image: np.ndarray, bbox: list[int], label: str, color=COLOR
     image_pil = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(image_pil)
 
-    try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/nanum/NanumGothic.ttf", font_size)
-    except OSError:
+    # 한글 폰트 경로들 (우선순위 순)
+    korean_font_paths = [
+        "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+        "/usr/share/fonts/truetype/nanum/NanumBarunGothic.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/System/Library/Fonts/Arial.ttf",  # macOS
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    ]
+    
+    # 텍스트가 한글인지 확인
+    is_korean = is_korean_text(label)
+    
+    if is_korean:
+        # 한글 폰트 찾기
+        font = find_working_font(korean_font_paths, font_size)
+        if font is None:
+            print("⚠️ 한글 폰트를 찾을 수 없어 기본 폰트 사용")
+            font = ImageFont.load_default()
+    else:
+        # 영어 텍스트는 기본 폰트 사용
         font = ImageFont.load_default()
 
-    draw.text((x1, y1 - font_size - 2), label, font=font, fill=(255, 0, 0))
+    # 텍스트 렌더링 시도
+    try:
+        draw.text((x1, y1 - font_size - 2), label, font=font, fill=(255, 0, 0))
+        if is_korean:
+            print(f"✅ 한글 텍스트 렌더링 성공: {label}")
+        else:
+            print(f"✅ 영어 텍스트 렌더링 성공: {label}")
+    except Exception as e:
+        print(f"❌ 텍스트 렌더링 실패: {label}, 오류: {e}")
+        if is_korean:
+            # 한글 렌더링 실패 시 영어로 대체
+            english_label = get_english_label(label)
+            draw.text((x1, y1 - font_size - 2), english_label, font=font, fill=(255, 0, 0))
+            print(f"🔄 영어로 대체: {label} → {english_label}")
+        else:
+            # 영어도 실패하면 간단한 텍스트로 대체
+            simple_label = label[:10] if len(label) > 10 else label
+            draw.text((x1, y1 - font_size - 2), simple_label, font=font, fill=(255, 0, 0))
+            print(f"🔄 간단한 텍스트로 대체: {label} → {simple_label}")
 
     # PIL → OpenCV 변환
     return cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)
