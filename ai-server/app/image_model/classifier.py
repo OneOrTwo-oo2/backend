@@ -8,6 +8,7 @@ from PIL import ImageFont, ImageDraw, Image
 import numpy as np
 from torchvision import transforms
 import config
+from utils.emoji_mapper import get_korean_name
 
 
 # 파일 상단(최초 1회만 로딩)
@@ -73,12 +74,15 @@ def classify_yolocls(image_path, keep, all_boxes, all_crops):
 
         kor_label, category = get_class_info(cls_label)
         
-        # box 및 label 이미지에 표시
-        image = draw_labeled_box(image=image,bbox=[x1,y1,x2,y2],label=kor_label)
+        # 한글 라벨로 변환 (emojiMap 기준)
+        korean_label = get_korean_name(cls_label)
+        
+        # box 및 label 이미지에 표시 (한글 라벨 사용)
+        image = draw_labeled_box(image=image,bbox=[x1,y1,x2,y2],label=korean_label)
         
         detections.append({
             "label": cls_label,
-            "korean": kor_label,
+            "korean": korean_label,
             "category": category,
             "conf": round(cls_conf, 3),
             "bbox": [x1, y1, x2, y2]
@@ -170,12 +174,15 @@ def classify_clip(image_path, keep, all_boxes, all_crops):
         if cls_conf < CLS_CONF_THRESHOLD:
             continue
 
-        # box 및 label 이미지에 표시
-        image = draw_labeled_box(image=image,bbox=[x1,y1,x2,y2],label=cls_label)
+        # 한글 라벨로 변환
+        korean_label = get_korean_name(cls_label)
+
+        # box 및 label 이미지에 표시 (한글 라벨 사용)
+        image = draw_labeled_box(image=image,bbox=[x1,y1,x2,y2],label=korean_label)
 
         detections.append({
             "label": cls_label,
-            "korean": cls_label,
+            "korean": korean_label,
             "category": 'clip',
             "conf": round(cls_conf, 3),
             "bbox": [x1, y1, x2, y2]
@@ -252,6 +259,9 @@ def classify_clip_filtered_bbox(image_path, keep, all_boxes, all_crops, confiden
         if cls_conf < CLS_CONF_THRESHOLD:
             continue
 
+        # 한글 라벨로 변환
+        korean_label = get_korean_name(cls_label)
+        
         # 정확도 70% 미만이고 18% 이상인 경우에만 bounding box 그리기
         if cls_conf < confidence_threshold and cls_conf >= 0.18:
             # 정확도에 따른 색상 결정
@@ -260,12 +270,12 @@ def classify_clip_filtered_bbox(image_path, keep, all_boxes, all_crops, confiden
             else:
                 color = (0, 0, 255)    # 빨간색 (18-30%)
             
-            # box 및 label 이미지에 표시 (색상 지정)
-            image = draw_labeled_box(image=image, bbox=[x1,y1,x2,y2], label=cls_label, color=color)
+            # box 및 label 이미지에 표시 (한글 라벨 사용, 색상 지정)
+            image = draw_labeled_box(image=image, bbox=[x1,y1,x2,y2], label=korean_label, color=color)
 
         detections.append({
             "label": cls_label,
-            "korean": cls_label,
+            "korean": korean_label,
             "category": 'clip',
             "conf": round(cls_conf, 3),
             "bbox": [x1, y1, x2, y2]
