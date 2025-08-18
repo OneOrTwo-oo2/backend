@@ -1,6 +1,7 @@
 # Recipe Go 로고
 
-![로고](./src/assets/recipego_logo.png)
+<img width="344" height="197" alt="recipego_logo" src="https://github.com/user-attachments/assets/4b7588e0-b990-45a6-8557-0a6f572863d3" />
+
 
 ## 개요
 
@@ -70,7 +71,8 @@
 
 ## Main Page
 
-![로고](./src/assets/main.png)
+<img width="344" height="197" alt="recipego_logo" src="https://github.com/user-attachments/assets/d597f608-7e96-4320-a74d-6edec570a5fa" />
+
 
 메인화면은 세가지의 메인기능으로 구성되어 있습니다.
 
@@ -247,6 +249,7 @@ White_List 도입으로 라벨 통일화 작업 및 Block_List 로 오탐 객체
 <br/>
 
 <img width="628" height="469" alt="image" src="https://github.com/user-attachments/assets/765bb2a8-94d8-48f8-a493-825ab5a6813f" />
+
 
 
 
