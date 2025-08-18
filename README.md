@@ -71,8 +71,7 @@
 
 ## Main Page
 
-<img width="344" height="197" alt="recipego_logo" src="https://github.com/user-attachments/assets/d597f608-7e96-4320-a74d-6edec570a5fa" />
-
+<img width="1917" height="736" alt="main" src="https://github.com/user-attachments/assets/ad0040ca-9e4f-478e-83a1-90ecca475cdd" />
 
 메인화면은 세가지의 메인기능으로 구성되어 있습니다.
 
@@ -249,6 +248,7 @@ White_List 도입으로 라벨 통일화 작업 및 Block_List 로 오탐 객체
 <br/>
 
 <img width="628" height="469" alt="image" src="https://github.com/user-attachments/assets/765bb2a8-94d8-48f8-a493-825ab5a6813f" />
+
 
 
 
